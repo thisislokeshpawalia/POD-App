@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Farmer – Subsidy Delivery</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.5;
+    }
+    .header {
+      background: #2E7D32;
+      color: white;
+      padding: 20px 24px;
+    }
+    .header h1 { font-size: 1.4rem; }
+    .header p { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+    .container { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      color: #2E7D32;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e8f5e9;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-full { grid-column: 1 / -1; }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2E7D32;
+      box-shadow: 0 0 0 3px rgba(46,125,50,0.15);
+    }
+    .field { margin-bottom: 4px; }
+    .item-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary { background: #2E7D32; color: white; }
+    .btn-primary:hover { background: #1B5E20; }
+    .btn-secondary { background: #e8f5e9; color: #2E7D32; }
+    .btn-danger { background: #ffebee; color: #c62828; padding: 10px 14px; }
+    .actions { display: flex; gap: 12px; margin-top: 20px; }
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+    }
+    .alert-success { background: #e8f5e9; color: #1B5E20; border: 1px solid #a5d6a7; }
+    .alert-error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .auth-section { margin-bottom: 16px; }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .item-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Subsidy Delivery Partner</h1>
+    <p>Add a new farmer to the delivery list</p>
+  </div>
+
+  <div class="container">
+    <div id="alert" style="display:none"></div>
+
+    <div class="card auth-section">
+      <h2>Delivery Partner Login</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="authPhone">Phone *</label>
+          <input type="tel" id="authPhone" placeholder="9876543210" required>
+        </div>
+        <div class="field">
+          <label for="authPassword">Password *</label>
+          <input type="password" id="authPassword" placeholder="Min 4 characters" required>
+        </div>
+        <div class="field">
+          <label for="authName">Name (required for new users)</label>
+          <input type="text" id="authName" placeholder="Your full name">
+        </div>
+        <div class="field" style="display:flex;align-items:end">
+          <button type="button" class="btn btn-primary" onclick="loginOrRegister()" style="width:100%">Login / Register</button>
+        </div>
+      </div>
+    </div>
+
+    <form id="farmerForm" onsubmit="submitFarmer(event)">
+      <div class="card">
+        <h2>Farmer Details</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="name">Full Name *</label>
+            <input type="text" id="name" required placeholder="Ramesh Kumar">
+          </div>
+          <div class="field">
+            <label for="phone">Phone *</label>
+            <input type="tel" id="phone" required placeholder="9876543210">
+          </div>
+          <div class="field">
+            <label for="village">Village *</label>
+            <input type="text" id="village" required placeholder="Village Nandpur">
+          </div>
+          <div class="field">
+            <label for="district">District *</label>
+            <input type="text" id="district" required placeholder="Damoh">
+          </div>
+          <div class="field grid-full">
+            <label for="address">Address *</label>
+            <input type="text" id="address" required placeholder="House No. 12, Ward 3">
+          </div>
+          <div class="field">
+            <label for="pinCode">PIN Code *</label>
+            <input type="text" id="pinCode" required placeholder="470661" minlength="6" maxlength="10">
+          </div>
+          <div class="field">
+            <label for="otp">Delivery OTP *</label>
+            <input type="text" id="otp" value="1234" maxlength="4" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Location (GPS)</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="latitude">Latitude *</label>
+            <input type="number" id="latitude" step="any" required placeholder="23.2599">
+          </div>
+          <div class="field">
+            <label for="longitude">Longitude *</label>
+            <input type="number" id="longitude" step="any" required placeholder="77.4126">
+          </div>
+          <div class="field grid-full">
+            <button type="button" class="btn btn-secondary" onclick="getCurrentLocation()">Use My Current Location</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Subsidy Items *</h2>
+        <div id="itemsContainer"></div>
+        <button type="button" class="btn btn-secondary" onclick="addItemRow()" style="margin-top:8px">+ Add Item</button>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Save Farmer</button>
+        <button type="reset" class="btn btn-secondary" onclick="resetForm()">Clear Form</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let authToken = localStorage.getItem('authToken') || '';
+
+    function showAlert(message, type) {
+      const el = document.getElementById('alert');
+      el.className = 'alert alert-' + type;
+      el.textContent = message;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 5000);
+    }
+
+    async function loginOrRegister() {
+      const phone = document.getElementById('authPhone').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const name = document.getElementById('authName').value.trim();
+
+      if (!phone || !password) {
+        showAlert('Phone and password are required', 'error');
+        return;
+      }
+
+      const body = { phone, password };
+      if (name) body.name = name;
+
+      try {
+        const res = await fetch('/auth/login-or-register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Authentication failed');
+
+        authToken = data.access_token;
+        localStorage.setItem('authToken', authToken);
+        showAlert(
+          data.is_new_user
+            ? `Registered & logged in as ${data.partner.name}`
+            : `Welcome back, ${data.partner.name}!`,
+          'success'
+        );
+      } catch (err) {
+        showAlert(err.message, 'error');
+      }
+    }
+
+    function addItemRow(name = '', quantity = '', unit = 'kg') {
+      const container = document.getElementById('itemsContainer');
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div><label>Item Name</label><input type="text" class="item-name" value="${name}" placeholder="Cattle Feed" required></div>
+        <div><label>Qty</label><input type="number" class="item-qty" value="${quantity}" step="any" min="0.1" placeholder="25" required></div>
+        <div><label>Unit</label>
+          <select class="item-unit">
+            <option value="kg" ${unit === 'kg' ? 'selected' : ''}>kg</option>
+            <option value="strips" ${unit === 'strips' ? 'selected' : ''}>strips</option>
+            <option value="vials" ${unit === 'vials' ? 'selected' : ''}>vials</option>
+            <option value="litres" ${unit === 'litres' ? 'selected' : ''}>litres</option>
+            <option value="bags" ${unit === 'bags' ? 'selected' : ''}>bags</option>
+          </select>
+        </div>
+        <div><label>&nbsp;</label><button type="button" class="btn btn-danger" onclick="this.closest('.item-row').remove()">✕</button></div>
+      `;
+      container.appendChild(row);
+    }
+
+    function getCurrentLocation() {
+      if (!navigator.geolocation) {
+        showAlert('Geolocation is not supported by your browser', 'error');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('latitude').value = pos.coords.latitude.toFixed(6);
+          document.getElementById('longitude').value = pos.coords.longitude.toFixed(6);
+          showAlert('Location captured successfully', 'success');
+        },
+        () => showAlert('Unable to get location. Please enter manually.', 'error')
+      );
+    }
+
+    async function submitFarmer(e) {
+      e.preventDefault();
+
+      if (!authToken) {
+        showAlert('Please login or register first', 'error');
+        return;
+      }
+
+      const items = [];
+      document.querySelectorAll('.item-row').forEach(row => {
+        items.push({
+          name: row.querySelector('.item-name').value.trim(),
+          quantity: parseFloat(row.querySelector('.item-qty').value),
+          unit: row.querySelector('.item-unit').value,
+        });
+      });
+
+      if (items.length === 0) {
+        showAlert('Add at least one subsidy item', 'error');
+        return;
+      }
+
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        village: document.getElementById('village').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        district: document.getElementById('district').value.trim(),
+        pin_code: document.getElementById('pinCode').value.trim(),
+        latitude: parseFloat(document.getElementById('latitude').value),
+        longitude: parseFloat(document.getElementById('longitude').value),
+        otp: document.getElementById('otp').value.trim(),
+        items,
+      };
+
+      try {
+        const res = await fetch('/farmers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authToken,
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail));
+
+        showAlert(`Farmer ${data.name} saved with ID ${data.id}`, 'success');
+        document.getElementById('farmerForm').reset();
+        document.getElementById('itemsContainer').innerHTML = '';
+        addItemRow('Cattle Feed', '25', 'kg');
+      } catch (err) {
+        showAlert(err.message, 'error');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('itemsContainer').innerHTML = '';
+      addItemRow('Cattle Feed', '25', 'kg');
+    }
+
+    // Initialize with one default item row
+    addItemRow('Cattle Feed', '25', 'kg');
+  </script>
+</body>
+</html>
