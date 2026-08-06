@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String get _enteredOtp => _otpControllers.map((c) => c.text.trim()).join();
 
-  void _handleLoginSubmit() {
+  void _handleLoginSubmit() async {
     FocusScope.of(context).unfocus();
     final rawPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
 
@@ -59,10 +59,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final authProvider = context.read<AuthProvider>();
-    authProvider.loginBypass(rawPhone);
+    final exists = await authProvider.checkPhoneAndRequestOtp(rawPhone);
+    if (!mounted) return;
+    
+    if (exists) {
+      setState(() => _flowState = LoginFlowState.registerOtp);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('OTP sent successfully! Enter 1234 to verify.')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Account not found. Please register.'),
+        backgroundColor: Colors.orange,
+      ));
+      setState(() => _flowState = LoginFlowState.registerForm);
+    }
   }
 
-  void _handleRegisterSubmit() {
+  void _handleRegisterSubmit() async {
     FocusScope.of(context).unfocus();
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,17 +98,15 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.startRegistration(rawPhone);
+    if (!mounted) return;
+
     // Go to OTP screen
     setState(() {
       _flowState = LoginFlowState.registerOtp;
     });
 
-    // Auto-fill test OTP for demo
-    const testOtp = '1234';
-    for (int i = 0; i < 4; i++) {
-      _otpControllers[i].text = testOtp[i];
-    }
-    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('OTP sent successfully! Enter 1234 to verify.'),
@@ -105,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _handleOtpSubmit() {
+  void _handleOtpSubmit() async {
     FocusScope.of(context).unfocus();
     if (_enteredOtp.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,22 +124,32 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (_enteredOtp != '1234') {
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.verifyOtpAndLogin(_enteredOtp);
+    
+    if (!mounted) return;
+    if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid OTP. Please enter 1234.'),
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Invalid OTP.'),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    final authProvider = context.read<AuthProvider>();
-    authProvider.registerBypass(
-      _nameController.text.trim(),
-      _phoneController.text.trim(),
-      _aadhaarController.text.trim(),
-    );
+    if (authProvider.isRegistrationFlow) {
+      await authProvider.completeProfile(
+        fullName: _nameController.text.trim(),
+        aadhaar: _aadhaarController.text.trim(),
+        address: 'Sector 132',
+        city: 'Noida',
+        state: 'UP',
+        pincode: '201304',
+        vehicleType: 'Bike',
+        vehicleNumber: 'NA',
+      );
+    }
   }
 
   Widget _buildInitialView() {

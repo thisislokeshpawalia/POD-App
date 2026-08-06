@@ -60,7 +60,6 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> checkPhoneAndRequestOtp(String phone) async {
     _errorMessage = null;
-    _status = AuthStatus.loading;
     _currentPhone = phone.trim();
     notifyListeners();
 
@@ -73,13 +72,10 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
         return true; // Exists
       } else {
-        _status = AuthStatus.unauthenticated;
-        notifyListeners();
-        return false; // Not registered -> UI should show confirmation dialog
+        return false; // Not registered
       }
     } catch (e) {
       _errorMessage = e.toString();
-      _status = AuthStatus.unauthenticated;
       notifyListeners();
       return false;
     }
@@ -87,7 +83,6 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> startRegistration(String phone) async {
     _errorMessage = null;
-    _status = AuthStatus.loading;
     _currentPhone = phone.trim();
     _isRegistrationFlow = true;
     notifyListeners();
@@ -97,7 +92,6 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.otpSent;
     } catch (e) {
       _errorMessage = e.toString();
-      _status = AuthStatus.unauthenticated;
     }
     notifyListeners();
   }
@@ -105,7 +99,6 @@ class AuthProvider with ChangeNotifier {
   Future<bool> verifyOtpAndLogin(String otp) async {
     if (_currentPhone == null) return false;
     _errorMessage = null;
-    _status = AuthStatus.loading;
     notifyListeners();
 
     try {
@@ -134,7 +127,6 @@ class AuthProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
-      _status = AuthStatus.otpSent;
       notifyListeners();
       return false;
     }
@@ -152,7 +144,6 @@ class AuthProvider with ChangeNotifier {
     String? aadhaar,
   }) async {
     _errorMessage = null;
-    _status = AuthStatus.loading;
     notifyListeners();
 
     try {
@@ -174,7 +165,6 @@ class AuthProvider with ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = e.toString();
-      _status = AuthStatus.needsProfile;
       notifyListeners();
       return false;
     }

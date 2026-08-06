@@ -192,7 +192,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
               // Vehicle Type
               DropdownButtonFormField<String>(
-                value: ['Two Wheeler', 'Three Wheeler', 'Four Wheeler', 'Other']
+                initialValue: ['Two Wheeler', 'Three Wheeler', 'Four Wheeler', 'Other']
                         .contains(_vehicleTypeController.text)
                     ? _vehicleTypeController.text
                     : 'Two Wheeler',

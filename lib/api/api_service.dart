@@ -48,7 +48,7 @@ class ApiService {
     }
 
     try {
-      final response = await _client.get(uri, headers: _headers);
+      final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -63,7 +63,7 @@ class ApiService {
         uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -78,7 +78,7 @@ class ApiService {
         uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -89,7 +89,7 @@ class ApiService {
   Future<dynamic> delete(String endpoint) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     try {
-      final response = await _client.delete(uri, headers: _headers);
+      final response = await _client.delete(uri, headers: _headers).timeout(const Duration(seconds: 15));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../api/api_service.dart';
+
 import '../models/customer.dart';
 import '../repositories/farmer_repository.dart';
 import '../screens/customer_list_screen.dart';
@@ -48,11 +48,10 @@ class FarmerProvider with ChangeNotifier {
 
     try {
       await [Permission.location, Permission.camera].request();
-      Position? position;
       try {
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (serviceEnabled) {
-          position = await Geolocator.getCurrentPosition(
+          await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
           );
         }
@@ -60,128 +59,7 @@ class FarmerProvider with ChangeNotifier {
         debugPrint('Could not get location: $e');
       }
 
-      _farmers = [
-        Customer(
-          id: 'C001',
-          name: 'Rahul Sharma',
-          phone: '9876543210',
-          village: 'Sector 132',
-          address: 'Jaypee Wish Town',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.pending,
-          latitude: 28.5118,
-          longitude: 77.3736,
-          items: const [
-            DeliveryItem(name: 'Fertilizer', quantity: 2, unit: 'Bags'),
-          ],
-        ),
-        Customer(
-          id: 'C002',
-          name: 'Priya Verma',
-          phone: '9876543211',
-          village: 'Sector 132',
-          address: 'Paras Tierea',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.inTransit,
-          latitude: 28.5079,
-          longitude: 77.3708,
-          items: const [
-            DeliveryItem(name: 'Pesticide', quantity: 5, unit: 'Bottles'),
-          ],
-        ),
-        Customer(
-          id: 'C003',
-          name: 'Amit Kumar',
-          phone: '9876543212',
-          village: 'Sector 128',
-          address: 'Expressway Service Road',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.pending,
-          latitude: 28.5174,
-          longitude: 77.3669,
-          items: const [
-            DeliveryItem(name: 'Seed Packets', quantity: 15, unit: 'Packs'),
-          ],
-        ),
-        Customer(
-          id: 'C004',
-          name: 'Neha Gupta',
-          phone: '9876543213',
-          village: 'Sector 132',
-          address: 'Supertech Eco Village',
-          district: 'Noida',
-          pinCode: '201305',
-          status: DeliveryStatus.delivered,
-          latitude: 28.5008,
-          longitude: 77.3823,
-          items: const [
-            DeliveryItem(name: 'Organic Compost', quantity: 4, unit: 'Bags'),
-          ],
-        ),
-        Customer(
-          id: 'C005',
-          name: 'Suresh Yadav',
-          phone: '9876543214',
-          village: 'Sector 135',
-          address: 'Assotech Business Cresterra',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.pending,
-          latitude: 28.5059,
-          longitude: 77.3775,
-          items: const [
-            DeliveryItem(name: 'Sprayer', quantity: 1, unit: 'Piece'),
-          ],
-        ),
-        Customer(
-          id: 'C006',
-          name: 'Anjali Singh',
-          phone: '9876543215',
-          village: 'Sector 134',
-          address: 'Expressway Link Road',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.inTransit,
-          latitude: 28.5096,
-          longitude: 77.3809,
-          items: const [
-            DeliveryItem(name: 'Urea', quantity: 3, unit: 'Bags'),
-          ],
-        ),
-        Customer(
-          id: 'C007',
-          name: 'Vikas Chauhan',
-          phone: '9876543216',
-          village: 'Sector 143',
-          address: 'Advant Navis',
-          district: 'Noida',
-          pinCode: '201306',
-          status: DeliveryStatus.pending,
-          latitude: 28.4955,
-          longitude: 77.3908,
-          items: const [
-            DeliveryItem(name: 'Drip Pipe', quantity: 30, unit: 'Meters'),
-          ],
-        ),
-        Customer(
-          id: 'C008',
-          name: 'Pooja Mishra',
-          phone: '9876543217',
-          village: 'Sector 129',
-          address: 'Noida-Greater Noida Expressway',
-          district: 'Noida',
-          pinCode: '201304',
-          status: DeliveryStatus.delivered,
-          latitude: 28.5159,
-          longitude: 77.3692,
-          items: const [
-            DeliveryItem(name: 'Plant Growth Booster', quantity: 6, unit: 'Packets'),
-          ],
-        ),
-      ];
+      _farmers = await _farmerRepository.fetchFarmers();
 
       _isLoading = false;
     } catch (e) {
@@ -198,22 +76,7 @@ class FarmerProvider with ChangeNotifier {
   Future<bool> addFarmer(Customer customer) async {
     _errorMessage = null;
     try {
-      // Mocking local add
-      final fakeId = 'F${DateTime.now().millisecondsSinceEpoch}';
-      final created = Customer(
-        id: fakeId,
-        name: customer.name,
-        phone: customer.phone,
-        village: customer.village,
-        address: customer.address,
-        district: customer.district,
-        pinCode: customer.pinCode,
-        status: customer.status,
-        latitude: customer.latitude,
-        longitude: customer.longitude,
-        items: customer.items,
-        otp: customer.otp,
-      );
+      final created = await _farmerRepository.createFarmer(customer);
       _farmers.insert(0, created);
       notifyListeners();
       return true;
@@ -227,10 +90,10 @@ class FarmerProvider with ChangeNotifier {
   Future<bool> updateFarmer(String farmerId, Customer customer) async {
     _errorMessage = null;
     try {
-      // Mock local update
+      final updated = await _farmerRepository.updateFarmer(farmerId, customer);
       final index = _farmers.indexWhere((f) => f.id == farmerId);
       if (index != -1) {
-        _farmers[index] = customer;
+        _farmers[index] = updated;
       }
       notifyListeners();
       return true;
@@ -244,7 +107,7 @@ class FarmerProvider with ChangeNotifier {
   Future<bool> deleteFarmer(String farmerId) async {
     _errorMessage = null;
     try {
-      // Mock local delete
+      await _farmerRepository.deleteFarmer(farmerId);
       _farmers.removeWhere((f) => f.id == farmerId);
       notifyListeners();
       return true;
@@ -258,10 +121,10 @@ class FarmerProvider with ChangeNotifier {
   Future<bool> markDelivered(String farmerId) async {
     _errorMessage = null;
     try {
-      // Mock local mark delivered
+      final updated = await _farmerRepository.markDelivered(farmerId);
       final index = _farmers.indexWhere((f) => f.id == farmerId);
       if (index != -1) {
-        _farmers[index] = _farmers[index]..status = DeliveryStatus.delivered;
+        _farmers[index] = updated;
       }
       notifyListeners();
       return true;
