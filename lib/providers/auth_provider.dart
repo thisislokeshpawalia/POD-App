@@ -180,6 +180,43 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  void loginBypass(String phone) {
+    _currentPhone = phone;
+    _partner = DeliveryPartnerModel(
+      id: 999,
+      name: 'Test Delivery Partner',
+      phone: phone,
+      address: 'Test Address',
+      city: 'Test City',
+      state: 'Test State',
+      pincode: '000000',
+      vehicleType: 'Bike',
+      vehicleNumber: 'AB12CD3456',
+      createdAt: DateTime.now(),
+    );
+    _status = AuthStatus.authenticated;
+    notifyListeners();
+  }
+
+  void registerBypass(String name, String phone, String aadhaar) {
+    _currentPhone = phone;
+    _partner = DeliveryPartnerModel(
+      id: 1000,
+      name: name,
+      phone: phone,
+      aadhaar: aadhaar,
+      address: 'Test Address',
+      city: 'Test City',
+      state: 'Test State',
+      pincode: '000000',
+      vehicleType: 'Bike',
+      vehicleNumber: 'AB12CD3456',
+      createdAt: DateTime.now(),
+    );
+    _status = AuthStatus.authenticated;
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await _authRepository.logout();
     _partner = null;
