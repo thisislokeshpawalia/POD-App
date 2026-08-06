@@ -1,176 +1,118 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
 from app.auth import get_current_partner
 from app.database import get_db
-from app.models import DeliveryItem, DeliveryPartner, DeliveryStatus, Farmer
-from app.schemas import DeliveryItemResponse, FarmerCreate, FarmerResponse, FarmerUpdate
+from app.models import DeliveryStatus
+from app.schemas import FarmerCreate, FarmerResponse, FarmerUpdate, DeliveryItemResponse
 
 router = APIRouter(prefix="/farmers", tags=["Farmers"])
 
-
-def _generate_farmer_id(db: Session) -> str:
-    last = db.query(Farmer).order_by(Farmer.id.desc()).first()
-    next_num = (last.id + 1) if last else 1
-    return f"FRM-{next_num:03d}"
-
-
-def _farmer_to_response(farmer: Farmer) -> FarmerResponse:
-    return FarmerResponse(
-        id=farmer.farmer_id,
-        name=farmer.name,
-        phone=farmer.phone,
-        village=farmer.village,
-        address=farmer.address,
-        district=farmer.district,
-        pin_code=farmer.pin_code,
-        status=farmer.status,
-        latitude=farmer.latitude,
-        longitude=farmer.longitude,
-        otp=farmer.otp,
-        items=[DeliveryItemResponse.model_validate(item) for item in farmer.items],
-    )
-
+def _generate_farmer_id(db) -> str:
+    last = db.farmers.find_one({}, sort=[("_id", -1)])
+    if last and "farmer_id" in last:
+        try:
+            num = int(last["farmer_id"].split("-")[1])
+            return f"FRM-{num + 1:03d}"
+        except:
+            pass
+    return "FRM-001"
 
 @router.get("", response_model=list[FarmerResponse])
 def list_farmers(
     status_filter: Optional[DeliveryStatus] = None,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    query = db.query(Farmer).filter(Farmer.delivery_partner_id == partner.id)
+    query = {"delivery_partner_id": partner["id"]}
     if status_filter:
-        query = query.filter(Farmer.status == status_filter)
-    farmers = query.order_by(Farmer.created_at.desc()).all()
-    return [_farmer_to_response(f) for f in farmers]
-
+        query["status"] = status_filter
+    
+    farmers = list(db.farmers.find(query).sort("created_at", -1))
+    
+    responses = []
+    for f in farmers:
+        f["id"] = f["farmer_id"]
+        f["items"] = f.get("items", [])
+        responses.append(FarmerResponse(**f))
+    return responses
 
 @router.post("", response_model=FarmerResponse, status_code=status.HTTP_201_CREATED)
 def create_farmer(
     payload: FarmerCreate,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    farmer = Farmer(
-        farmer_id=_generate_farmer_id(db),
-        name=payload.name,
-        phone=payload.phone,
-        village=payload.village,
-        address=payload.address,
-        district=payload.district,
-        pin_code=payload.pin_code,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        otp=payload.otp,
-        delivery_partner_id=partner.id,
-    )
-    db.add(farmer)
-    db.flush()
-
-    for item in payload.items:
-        db.add(
-            DeliveryItem(
-                farmer_id=farmer.id,
-                name=item.name,
-                quantity=item.quantity,
-                unit=item.unit,
-            )
-        )
-
-    db.commit()
-    db.refresh(farmer)
-    return _farmer_to_response(farmer)
-
+    import datetime
+    farmer_data = payload.model_dump()
+    farmer_data["farmer_id"] = _generate_farmer_id(db)
+    farmer_data["id"] = farmer_data["farmer_id"]
+    farmer_data["delivery_partner_id"] = partner["id"]
+    farmer_data["status"] = DeliveryStatus.pending
+    farmer_data["created_at"] = datetime.datetime.utcnow()
+    
+    db.farmers.insert_one(farmer_data)
+    
+    farmer_data["items"] = farmer_data.get("items", [])
+    return FarmerResponse(**farmer_data)
 
 @router.get("/{farmer_id}", response_model=FarmerResponse)
 def get_farmer(
     farmer_id: str,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    farmer = (
-        db.query(Farmer)
-        .filter(Farmer.farmer_id == farmer_id, Farmer.delivery_partner_id == partner.id)
-        .first()
-    )
+    farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
-    return _farmer_to_response(farmer)
-
+        
+    farmer["id"] = farmer["farmer_id"]
+    farmer["items"] = farmer.get("items", [])
+    return FarmerResponse(**farmer)
 
 @router.patch("/{farmer_id}", response_model=FarmerResponse)
 def update_farmer(
     farmer_id: str,
     payload: FarmerUpdate,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    farmer = (
-        db.query(Farmer)
-        .filter(Farmer.farmer_id == farmer_id, Farmer.delivery_partner_id == partner.id)
-        .first()
-    )
+    farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
     update_data = payload.model_dump(exclude_unset=True)
-    items_data = update_data.pop("items", None)
-
-    for field, value in update_data.items():
-        setattr(farmer, field, value)
-
-    if items_data is not None:
-        db.query(DeliveryItem).filter(DeliveryItem.farmer_id == farmer.id).delete()
-        for item in items_data:
-            db.add(
-                DeliveryItem(
-                    farmer_id=farmer.id,
-                    name=item["name"],
-                    quantity=item["quantity"],
-                    unit=item["unit"],
-                )
-            )
-
-    db.commit()
-    db.refresh(farmer)
-    return _farmer_to_response(farmer)
-
+    if update_data:
+        db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
+        farmer.update(update_data)
+        
+    farmer["id"] = farmer["farmer_id"]
+    farmer["items"] = farmer.get("items", [])
+    return FarmerResponse(**farmer)
 
 @router.patch("/{farmer_id}/deliver", response_model=FarmerResponse)
 def mark_delivered(
     farmer_id: str,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    farmer = (
-        db.query(Farmer)
-        .filter(Farmer.farmer_id == farmer_id, Farmer.delivery_partner_id == partner.id)
-        .first()
-    )
+    farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
-    farmer.status = DeliveryStatus.delivered
-    db.commit()
-    db.refresh(farmer)
-    return _farmer_to_response(farmer)
-
+    db.farmers.update_one({"_id": farmer["_id"]}, {"$set": {"status": DeliveryStatus.delivered}})
+    farmer["status"] = DeliveryStatus.delivered
+    
+    farmer["id"] = farmer["farmer_id"]
+    farmer["items"] = farmer.get("items", [])
+    return FarmerResponse(**farmer)
 
 @router.delete("/{farmer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_farmer(
     farmer_id: str,
-    db: Session = Depends(get_db),
-    partner: DeliveryPartner = Depends(get_current_partner),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
 ):
-    farmer = (
-        db.query(Farmer)
-        .filter(Farmer.farmer_id == farmer_id, Farmer.delivery_partner_id == partner.id)
-        .first()
-    )
-    if not farmer:
+    result = db.farmers.delete_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
+    if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Farmer not found")
-
-    db.delete(farmer)
-    db.commit()
     return None
