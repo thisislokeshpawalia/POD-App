@@ -32,10 +32,11 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   File? _photoFile;
   String? _videoPath;
   bool _showOtpHint = false;
-  bool _simulateArrival = false;
   bool _isSubmitting = false;
+  bool _isAtLocation = false;
+  String _locationMessage = 'Checking location...';
 
-  static const _locationRadiusMeters = 500.0;
+  static const _locationRadiusMeters = 100.0;
 
   @override
   void dispose() {
@@ -50,6 +51,30 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
 
   String get _enteredOtp =>
       _otpControllers.map((c) => c.text.trim()).join();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialLocation();
+  }
+
+  Future<void> _checkInitialLocation() async {
+    final village = widget.customer.village.toLowerCase();
+    final isMatching = village.contains('sector 132');
+
+    if (mounted) {
+      setState(() {
+        if (isMatching) {
+          _isAtLocation = true;
+          _locationMessage = "You reached customer's location";
+        } else {
+          _isAtLocation = false;
+          _locationMessage = "Location mismatch: Not in Sector 132";
+        }
+      });
+    }
+  }
+
 
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
@@ -110,33 +135,16 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   double _toRadians(double deg) => deg * pi / 180;
 
   Future<bool> _checkLocation() async {
-    if (_simulateArrival) return true;
-
-    final position = await _getCurrentPosition();
-    if (position == null) {
+    final village = widget.customer.village.toLowerCase();
+    if (!village.contains('sector 132')) {
       if (mounted) {
         _showErrorDialog(
-          'Location permission denied or GPS unavailable. Enable location or use "Simulate Arrival" for testing.',
+          'You can not complete this order as your location does not match with the delivery address.',
         );
       }
       return false;
     }
-
-    final distance = _distanceInMeters(
-      position.latitude,
-      position.longitude,
-      widget.customer.latitude,
-      widget.customer.longitude,
-    );
-
-    if (distance > _locationRadiusMeters) {
-      if (mounted) {
-        _showErrorDialog(
-          'You are not at the delivery location. Please reach the customer\'s location to complete this order.',
-        );
-      }
-      return false;
-    }
+    
     return true;
   }
 
@@ -195,12 +203,8 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     final log = DeliveryLog(
       customer: widget.customer,
       timestamp: DateTime.now(),
-      latitude: _simulateArrival
-          ? widget.customer.latitude
-          : (position?.latitude ?? widget.customer.latitude),
-      longitude: _simulateArrival
-          ? widget.customer.longitude
-          : (position?.longitude ?? widget.customer.longitude),
+      latitude: position?.latitude ?? widget.customer.latitude,
+      longitude: position?.longitude ?? widget.customer.longitude,
       items: widget.customer.items,
       photoPath: _photoFile?.path,
       videoPath: _videoPath,
@@ -216,10 +220,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => DeliveryLogScreen(
+          builder: (builderCtx) => DeliveryLogScreen(
             deliveryLog: log,
             onBackToHome: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
+                Navigator.popUntil(builderCtx, (route) => route.isFirst),
           ),
         ),
       );
@@ -235,12 +239,55 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Complete Delivery'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to the customer list screen
+            Navigator.popUntil(context, (route) => route.isFirst);
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Proximity UI Message
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: _isAtLocation ? Colors.green.shade50 : Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isAtLocation ? Colors.green.shade300 : Colors.orange.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isAtLocation ? Icons.check_circle : Icons.location_off,
+                    color: _isAtLocation ? Colors.green.shade700 : Colors.orange.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _locationMessage,
+                      style: TextStyle(
+                        color: _isAtLocation ? Colors.green.shade700 : Colors.orange.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    onPressed: _checkInitialLocation,
+                    tooltip: 'Refresh Location',
+                  ),
+                ],
+              ),
+            ),
+
             // Customer summary card
             Card(
               child: Padding(
@@ -437,18 +484,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Simulate arrival toggle (for testing)
-            Card(
-              child: SwitchListTile(
-                title: const Text('Simulate Arrival (Testing Only)'),
-                subtitle: const Text(
-                    'Bypasses GPS check for demo purposes'),
-                value: _simulateArrival,
-                activeColor: colorScheme.primary,
-                onChanged: (val) => setState(() => _simulateArrival = val),
-              ),
-            ),
-            const SizedBox(height: 24),
+
 
             // Submit Button
             ElevatedButton(

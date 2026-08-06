@@ -15,7 +15,6 @@ import 'services/farmer_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await _requestPermissions();
 
   final apiService = ApiService();
   final authService = AuthService(apiService);
@@ -38,13 +37,6 @@ void main() async {
   );
 }
 
-Future<void> _requestPermissions() async {
-  await [
-    Permission.location,
-    Permission.camera,
-    Permission.photos,
-  ].request();
-}
 
 class SubsidyDeliveryApp extends StatelessWidget {
   const SubsidyDeliveryApp({super.key});
@@ -95,6 +87,72 @@ class SubsidyDeliveryApp extends StatelessWidget {
   }
 }
 
+class PermissionGate extends StatefulWidget {
+  final Widget child;
+  const PermissionGate({super.key, required this.child});
+
+  @override
+  State<PermissionGate> createState() => _PermissionGateState();
+}
+
+class _PermissionGateState extends State<PermissionGate> {
+  bool _permissionsGranted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
+  }
+
+  Future<void> _checkPermissions() async {
+    final locationStatus = await Permission.location.status;
+    final cameraStatus = await Permission.camera.status;
+    final allGranted = locationStatus.isGranted && cameraStatus.isGranted;
+    
+    if (allGranted) {
+      setState(() { _permissionsGranted = true; });
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showPermissionDialog();
+      });
+    }
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('App Permissions'),
+        content: const Text(
+            'To run properly, this app needs access to your Location, Camera, and Internet (Internet is enabled by default).'),
+        actions: [
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await [Permission.location, Permission.camera].request();
+              setState(() { _permissionsGranted = true; });
+            },
+            child: const Text('Grant Permissions'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_permissionsGranted) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return widget.child;
+  }
+}
+
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -129,7 +187,7 @@ class AuthGate extends StatelessWidget {
         return const ProfileCompletionScreen();
 
       case AuthStatus.authenticated:
-        return const CustomerListScreen();
+        return const PermissionGate(child: CustomerListScreen());
     }
   }
 }

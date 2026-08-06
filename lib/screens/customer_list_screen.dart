@@ -79,13 +79,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout, size: 20),
-            onPressed: () => context.read<AuthProvider>().logout(),
-            tooltip: 'Logout',
-          ),
+          const SizedBox(width: 16),
         ],
       ),
+      drawer: _buildDrawer(context, authProvider),
       body: RefreshIndicator(
         onRefresh: () => context.read<FarmerProvider>().refreshFarmers(),
         color: const Color(0xFF2E7D32),
@@ -240,6 +237,46 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context, AuthProvider authProvider) {
+    final partner = authProvider.partner;
+    return Drawer(
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(
+              color: Color(0xFF2E7D32),
+            ),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                partner?.name.isNotEmpty == true ? partner!.name[0].toUpperCase() : '?',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+              ),
+            ),
+            accountName: Text(partner?.name ?? 'Delivery Agent', style: const TextStyle(fontWeight: FontWeight.bold)),
+            accountEmail: Text(partner?.phone ?? ''),
+          ),
+          ListTile(
+            leading: const Icon(Icons.credit_card),
+            title: const Text('Aadhaar Number'),
+            subtitle: Text(partner?.aadhaar ?? 'Not provided'),
+          ),
+          const Spacer(),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            onTap: () {
+              Navigator.pop(context); // close drawer
+              authProvider.logout();
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }

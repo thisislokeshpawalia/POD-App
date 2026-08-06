@@ -1,4 +1,4 @@
-enum DeliveryStatus { pending, delivered }
+enum DeliveryStatus { pending, inTransit, delivered }
 
 class DeliveryItem {
   final String name;
@@ -73,11 +73,14 @@ class Customer {
   String get fullAddress => '$address, $village, $district – $pinCode';
   bool get isDelivered => status == DeliveryStatus.delivered;
   bool get isPending => status == DeliveryStatus.pending;
+  bool get isInTransit => status == DeliveryStatus.inTransit;
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     DeliveryStatus parsedStatus = DeliveryStatus.pending;
     if (json['status'] == 'delivered') {
       parsedStatus = DeliveryStatus.delivered;
+    } else if (json['status'] == 'inTransit') {
+      parsedStatus = DeliveryStatus.inTransit;
     }
 
     final rawItems = json['items'] as List<dynamic>? ?? [];
