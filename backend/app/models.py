@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -31,7 +31,7 @@ class DeliveryPartner(Base):
     profile_image: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    farmers: Mapped[list["Farmer"]] = relationship(back_populates="delivery_partner")
+    farmers: Mapped[List["Farmer"]] = relationship(back_populates="delivery_partner")
 
 
 class Farmer(Base):
@@ -57,7 +57,7 @@ class Farmer(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     delivery_partner: Mapped[Optional["DeliveryPartner"]] = relationship(back_populates="farmers")
-    items: Mapped[list["DeliveryItem"]] = relationship(
+    items: Mapped[List["DeliveryItem"]] = relationship(
         back_populates="farmer", cascade="all, delete-orphan"
     )
 
