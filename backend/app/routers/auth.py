@@ -43,7 +43,7 @@ def login_or_register(payload: AuthRequest, db = Depends(get_db)):
         db.delivery_partners.insert_one(partner)
         is_new_user = True
 
-    token = create_access_token({"sub": partner["id"]})
+    token = create_access_token({"sub": str(partner["id"])})
     return AuthResponse(
         access_token=token,
         is_new_user=is_new_user,
