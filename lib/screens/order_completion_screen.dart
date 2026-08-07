@@ -59,8 +59,31 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   }
 
   Future<void> _checkInitialLocation() async {
-    final village = widget.customer.village.toLowerCase();
-    final isMatching = village.contains('sector 132');
+    if (mounted) {
+      setState(() {
+        _locationMessage = 'Fetching exact location...';
+      });
+    }
+
+    final position = await _getCurrentPosition();
+    if (position == null) {
+      if (mounted) {
+        setState(() {
+          _isAtLocation = false;
+          _locationMessage = 'Location permission denied or service disabled.';
+        });
+      }
+      return;
+    }
+
+    final distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      widget.customer.latitude,
+      widget.customer.longitude,
+    );
+
+    final isMatching = distance <= 200.0;
 
     if (mounted) {
       setState(() {
@@ -69,7 +92,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
           _locationMessage = "You reached customer's location";
         } else {
           _isAtLocation = false;
-          _locationMessage = "Location mismatch: Not in Sector 132";
+          _locationMessage = "Location mismatch: You are ${distance.toStringAsFixed(0)}m away (limit: 200m)";
         }
       });
     }
@@ -117,11 +140,25 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
 
 
   Future<bool> _checkLocation() async {
-    final village = widget.customer.village.toLowerCase();
-    if (!village.contains('sector 132')) {
+    final position = await _getCurrentPosition();
+    if (position == null) {
+      if (mounted) {
+        _showErrorDialog('Unable to fetch location. Please enable GPS and allow location permissions.');
+      }
+      return false;
+    }
+
+    final distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      widget.customer.latitude,
+      widget.customer.longitude,
+    );
+
+    if (distance > 200.0) {
       if (mounted) {
         _showErrorDialog(
-          'You can not complete this order as your location does not match with the delivery address.',
+          'You cannot complete this order because you are ${distance.toStringAsFixed(0)}m away.\n\nYou must be within 200m of the delivery address.',
         );
       }
       return false;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../models/customer.dart';
 
 class FarmerFormDialog extends StatefulWidget {
@@ -24,6 +26,7 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
   late TextEditingController _otpController;
 
   final List<_ItemControllerGroup> _itemGroups = [];
+  bool _isLocating = false;
 
   @override
   void initState() {
@@ -33,10 +36,10 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
     _phoneController = TextEditingController(text: f?.phone ?? '');
     _villageController = TextEditingController(text: f?.village ?? '');
     _addressController = TextEditingController(text: f?.address ?? '');
-    _districtController = TextEditingController(text: f?.district ?? 'Damoh');
+    _districtController = TextEditingController(text: f?.district ?? '');
     _pinCodeController = TextEditingController(text: f?.pinCode ?? '');
-    _latController = TextEditingController(text: f != null ? f.latitude.toString() : '23.2599');
-    _lngController = TextEditingController(text: f != null ? f.longitude.toString() : '77.4126');
+    _latController = TextEditingController(text: f != null ? f.latitude.toString() : '');
+    _lngController = TextEditingController(text: f != null ? f.longitude.toString() : '');
     _otpController = TextEditingController(text: f?.otp ?? '1234');
 
     if (f != null && f.items.isNotEmpty) {
@@ -49,6 +52,56 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
       }
     } else {
       _itemGroups.add(_ItemControllerGroup(name: 'Cattle Feed', quantity: '25', unit: 'kg'));
+    }
+
+    if (f == null) {
+      _fetchCurrentLocation();
+    }
+  }
+
+  Future<void> _fetchCurrentLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      if (mounted) {
+        setState(() {
+          _latController.text = position.latitude.toStringAsFixed(6);
+          _lngController.text = position.longitude.toStringAsFixed(6);
+        });
+      }
+
+      final geocoding = Geocoding();
+      final placemarks = await geocoding.placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        if (mounted) {
+          setState(() {
+            _villageController.text = place.subLocality ?? place.locality ?? '';
+            _districtController.text = place.subAdministrativeArea ?? place.administrativeArea ?? '';
+            _pinCodeController.text = place.postalCode ?? '';
+            _addressController.text = '${place.name ?? ''} ${place.thoroughfare ?? ''}'.trim();
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore errors (e.g. if geocoding fails)
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
     }
   }
 
@@ -166,9 +219,29 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
               const SizedBox(height: 12),
 
               // Address Details
-              const Text(
-                'Location Details',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Location Details',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                  ),
+                  if (_isLocating)
+                    const Row(
+                      children: [
+                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 6),
+                        Text('Fetching GPS...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    )
+                  else if (!isEditing)
+                    TextButton.icon(
+                      onPressed: _fetchCurrentLocation,
+                      icon: const Icon(Icons.my_location, size: 16),
+                      label: const Text('Auto-fill', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+                    )
+                ],
               ),
               const SizedBox(height: 12),
               TextFormField(
