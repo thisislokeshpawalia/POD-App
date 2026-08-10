@@ -30,7 +30,7 @@ class CustomerDetailScreen extends StatelessWidget {
 
   Future<void> _launchMaps(BuildContext context) async {
     final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${customer.latitude},${customer.longitude}',
+      'https://www.google.com/maps/dir/?api=1&destination=${customer.latitude},${customer.longitude}',
     );
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);

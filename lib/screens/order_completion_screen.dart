@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
@@ -137,7 +138,18 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     );
   }
 
-
+  Future<void> _launchMaps() async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${widget.customer.latitude},${widget.customer.longitude}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        _showErrorDialog('Could not launch maps. Please ensure Google Maps is installed.');
+      }
+    }
+  }
 
   Future<bool> _checkLocation() async {
     final position = await _getCurrentPosition();
@@ -334,14 +346,31 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.customer.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.customer.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _launchMaps,
+                          icon: const Icon(Icons.navigation, size: 16),
+                          label: const Text('Navigate'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       widget.customer.fullAddress,
                       style: TextStyle(color: Colors.grey.shade600),
