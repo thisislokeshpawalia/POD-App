@@ -46,6 +46,8 @@ class Customer {
   final double longitude;
   final List<DeliveryItem> items;
   final String otp;
+  final String? videoUrl;
+  final String? invoiceUrl;
 
   Customer({
     required this.id,
@@ -60,6 +62,8 @@ class Customer {
     required this.longitude,
     required this.items,
     this.otp = '1234',
+    this.videoUrl,
+    this.invoiceUrl,
   });
 
   String get initials {
@@ -105,6 +109,8 @@ class Customer {
           : double.tryParse(json['longitude'].toString()) ?? 0.0,
       otp: json['otp'] ?? '1234',
       items: itemsList,
+      videoUrl: json['video_url'],
+      invoiceUrl: json['invoice_url'],
     );
   }
 

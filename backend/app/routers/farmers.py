@@ -143,7 +143,8 @@ async def upload_proof_of_delivery(
             farmer_name=farmer.get("name", "Unknown"),
             farmer_address=farmer.get("address", "Unknown Address"),
             farmer_district=farmer.get("district", ""),
-            video_link=video_url
+            video_link=video_url,
+            items=farmer.get("items", [])
         )
 
         # 5. Upload PDF Invoice to Cloudinary
