@@ -15,8 +15,24 @@ class InvoiceService {
     required Customer customer,
     required DateTime deliveryDate,
     String? photoPath,
+    bool forceOverwrite = false,
   }) async {
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final invoiceDirectory = Directory('${directory.path}/invoices');
+
+      if (!await invoiceDirectory.exists()) {
+        await invoiceDirectory.create(recursive: true);
+      }
+
+      final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
+
+      // If the file already exists (likely has the photo) and we aren't forcing an overwrite,
+      // just return the existing file rather than generating a new one without the photo.
+      if (file.existsSync() && !forceOverwrite && photoPath == null) {
+        return file.path;
+      }
+
       final pdf = pw.Document();
 
       // App Theme Colors (Matching a clean pet-care aesthetic)
@@ -292,14 +308,6 @@ class InvoiceService {
       // ============================================================
       // FILE STORAGE HANDLING
       // ============================================================
-      final directory = await getApplicationDocumentsDirectory();
-      final invoiceDirectory = Directory('${directory.path}/invoices');
-
-      if (!await invoiceDirectory.exists()) {
-        await invoiceDirectory.create(recursive: true);
-      }
-
-      final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
       final pdfBytes = await pdf.save();
 
       await file.writeAsBytes(pdfBytes, flush: true);
