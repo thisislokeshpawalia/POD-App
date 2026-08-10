@@ -2,8 +2,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 import os
 import shutil
-from app.services.cloudinary_service import upload_video
+from app.services.cloudinary_service import upload_video, upload_pdf
 from app.services.video_compression import compress_video
+from app.services.invoice_generator import generate_invoice
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -136,10 +137,24 @@ async def upload_proof_of_delivery(
         # 3. Upload Video to Cloudinary
         video_url = upload_video(compressed_video_path, f"Proof_{farmer_id}")
 
+        # 4. Generate Invoice (Using the Drive Link)
+        generate_invoice(
+            output_path=invoice_pdf_path,
+            farmer_name=farmer.get("name", "Unknown"),
+            farmer_address=farmer.get("address", "Unknown Address"),
+            farmer_district=farmer.get("district", ""),
+            video_link=video_url,
+            items=farmer.get("items", [])
+        )
+
+        # 5. Upload PDF Invoice to Cloudinary
+        invoice_url = upload_pdf(invoice_pdf_path, f"Invoice_{farmer_id}")
+
+        # 6. Update DB with delivery status and URLs
         update_data = {
             "status": DeliveryStatus.delivered,
             "video_url": video_url,
-            "invoice_url": None
+            "invoice_url": invoice_url
         }
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)
@@ -148,7 +163,7 @@ async def upload_proof_of_delivery(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Cleanup temp files
-        for p in [temp_video_path, compressed_video_path]:
+        for p in [temp_video_path, compressed_video_path, invoice_pdf_path]:
             if os.path.exists(p):
                 os.remove(p)
 
