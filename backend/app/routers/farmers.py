@@ -135,8 +135,12 @@ async def upload_proof_of_delivery(
         compress_video(temp_video_path, compressed_video_path)
 
         # 3. Upload Video to Google Drive
+        cred_path = "/etc/secrets/google_drive_credentials.json"
+        if not os.path.exists(cred_path):
+            cred_path = "google_drive_credentials.json"
+            
         drive_service = GoogleDriveService(
-            credentials_file="google_drive_credentials.json",
+            credentials_file=cred_path,
             folder_id=os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
         )
         video_url = drive_service.upload_file(compressed_video_path, f"Proof_{farmer_id}.mp4")
