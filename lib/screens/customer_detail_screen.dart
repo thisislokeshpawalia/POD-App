@@ -196,6 +196,26 @@ class CustomerDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            if (isDelivered && customer.invoiceUrl != null) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final uri = Uri.parse(customer.invoiceUrl!);
+                  try {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint("Could not launch $uri");
+                  }
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Download Invoice'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A4A6F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
           ],
         ),

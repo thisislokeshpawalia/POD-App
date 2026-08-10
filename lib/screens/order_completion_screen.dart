@@ -219,16 +219,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       position = await _getCurrentPosition();
     } catch (_) {}
 
-    final log = DeliveryLog(
-      customer: widget.customer,
-      timestamp: DateTime.now(),
-      latitude: position?.latitude ?? widget.customer.latitude,
-      longitude: position?.longitude ?? widget.customer.longitude,
-      items: widget.customer.items,
-      photoPath: _photoFile?.path,
-      videoPath: _videoPath,
-    );
-
+    // We will build the log AFTER the successful submission so we can include generated URLs
     widget.onCustomerDelivered(widget.customer.id);
     if (!mounted) return;
     
@@ -247,6 +238,22 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       _showErrorDialog(provider.errorMessage ?? 'An error occurred during submission.');
       return;
     }
+    
+    // Get updated customer with invoice and video URL
+    final updatedCustomer = provider.farmers.firstWhere(
+      (c) => c.id == widget.customer.id, 
+      orElse: () => widget.customer
+    );
+
+    final log = DeliveryLog(
+      customer: updatedCustomer,
+      timestamp: DateTime.now(),
+      latitude: position?.latitude ?? updatedCustomer.latitude,
+      longitude: position?.longitude ?? updatedCustomer.longitude,
+      items: updatedCustomer.items,
+      photoPath: _photoFile?.path,
+      videoPath: _videoPath,
+    );
 
     if (mounted) {
       Navigator.pushReplacement(

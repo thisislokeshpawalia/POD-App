@@ -33,7 +33,7 @@ def upload_pdf(file_path: str, public_id: str) -> str:
     
     response = cloudinary.uploader.upload(
         file_path,
-        resource_type="raw", # Raw for PDF files
+        resource_type="image", # Use image for PDFs to allow web delivery
         public_id=public_id,
         folder="pod_invoices",
     )
