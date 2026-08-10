@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     secret_key: str = "7294b4b2e83151811eefcbdf7e324abef8a1e5088f1dc344c2de0cc7b9ffae"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
+    google_drive_folder_id: str = ""
 
     class Config:
         env_file = ".env"

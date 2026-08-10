@@ -16,8 +16,7 @@ class GoogleDriveService:
                 self.credentials_file, scopes=SCOPES)
             self.service = build('drive', 'v3', credentials=self.credentials)
         except Exception as e:
-            print(f"Error loading Google Drive Credentials: {e}")
-            self.service = None
+            raise Exception(f"Failed to load Drive Service at {self.credentials_file}: {e}")
 
     def upload_file(self, file_path: str, file_name: str, mime_type: str = 'video/mp4') -> str:
         """

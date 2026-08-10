@@ -83,7 +83,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       widget.customer.longitude,
     );
 
-    final isMatching = distance <= 200.0;
+    final isMatching = distance <= 600.0;
 
     if (mounted) {
       setState(() {
@@ -92,7 +92,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
           _locationMessage = "You reached customer's location";
         } else {
           _isAtLocation = false;
-          _locationMessage = "Location mismatch: You are ${distance.toStringAsFixed(0)}m away (limit: 200m)";
+          _locationMessage = "Location mismatch: You are ${distance.toStringAsFixed(0)}m away (limit: 600m)";
         }
       });
     }
@@ -155,10 +155,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       widget.customer.longitude,
     );
 
-    if (distance > 200.0) {
+    if (distance > 600.0) {
       if (mounted) {
         _showErrorDialog(
-          'You cannot complete this order because you are ${distance.toStringAsFixed(0)}m away.\n\nYou must be within 200m of the delivery address.',
+          'You cannot complete this order because you are ${distance.toStringAsFixed(0)}m away.\n\nYou must be within 600m of the delivery address.',
         );
       }
       return false;
