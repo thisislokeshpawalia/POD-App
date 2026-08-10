@@ -166,6 +166,7 @@ class DeliveryLogScreen extends StatelessWidget {
                   final path = await InvoiceService.generateInvoicePdf(
                     customer: deliveryLog.customer,
                     deliveryDate: deliveryLog.timestamp,
+                    photoPath: deliveryLog.photoPath,
                   );
                   await OpenFilex.open(path);
                 } catch (e) {
