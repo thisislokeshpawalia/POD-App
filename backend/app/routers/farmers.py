@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 import os
 import shutil
-from app.services.google_drive import GoogleDriveService
+from app.services.cloudinary_service import upload_video, upload_pdf
 from app.services.video_compression import compress_video
 from app.services.invoice_generator import generate_invoice
 from app.auth import get_current_partner
@@ -134,16 +134,8 @@ async def upload_proof_of_delivery(
         # 2. Compress Video to 360p
         compress_video(temp_video_path, compressed_video_path)
 
-        # 3. Upload Video to Google Drive
-        cred_path = "/etc/secrets/google_drive_credentials.json"
-        if not os.path.exists(cred_path):
-            cred_path = "google_drive_credentials.json"
-            
-        drive_service = GoogleDriveService(
-            credentials_file=cred_path,
-            folder_id=os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
-        )
-        video_url = drive_service.upload_file(compressed_video_path, f"Proof_{farmer_id}.mp4")
+        # 3. Upload Video to Cloudinary
+        video_url = upload_video(compressed_video_path, f"Proof_{farmer_id}")
 
         # 4. Generate Invoice (Using the Drive Link)
         generate_invoice(
@@ -154,8 +146,8 @@ async def upload_proof_of_delivery(
             video_link=video_url
         )
 
-        # 5. Upload PDF Invoice to Google Drive (optional, but requested so it's a link)
-        invoice_url = drive_service.upload_file(invoice_pdf_path, f"Invoice_{farmer_id}.pdf", mime_type="application/pdf")
+        # 5. Upload PDF Invoice to Cloudinary
+        invoice_url = upload_pdf(invoice_pdf_path, f"Invoice_{farmer_id}")
 
         # 6. Update DB with delivery status and URLs
         update_data = {
