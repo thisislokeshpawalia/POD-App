@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/customer.dart';
+import '../services/invoice_service.dart';
 import 'order_completion_screen.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
@@ -196,19 +198,22 @@ class CustomerDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            if (isDelivered && customer.invoiceUrl != null) ...[
+            if (isDelivered) ...[
               const SizedBox(height: 12),
               ElevatedButton.icon(
                 onPressed: () async {
-                  final uri = Uri.parse(customer.invoiceUrl!);
                   try {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    final path = await InvoiceService.generateInvoicePdf(
+                      customer: customer,
+                      deliveryDate: DateTime.now(), // Fallback for past deliveries
+                    );
+                    await OpenFilex.open(path);
                   } catch (e) {
-                    debugPrint("Could not launch $uri");
+                    debugPrint("Error generating invoice: $e");
                   }
                 },
                 icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Download Invoice'),
+                label: const Text('Generate & View Invoice'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0A4A6F),
                   foregroundColor: Colors.white,
