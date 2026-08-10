@@ -1,5 +1,10 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+import os
+import shutil
+from app.services.google_drive import GoogleDriveService
+from app.services.video_compression import compress_video
+from app.services.invoice_generator import generate_invoice
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -102,6 +107,69 @@ def mark_delivered(
     db.farmers.update_one({"_id": farmer["_id"]}, {"$set": {"status": DeliveryStatus.delivered}})
     farmer["status"] = DeliveryStatus.delivered
     
+    farmer["id"] = farmer["farmer_id"]
+    farmer["items"] = farmer.get("items", [])
+    return FarmerResponse(**farmer)
+
+@router.post("/{farmer_id}/upload_proof", response_model=FarmerResponse)
+async def upload_proof_of_delivery(
+    farmer_id: str,
+    video: UploadFile = File(...),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
+):
+    farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+
+    temp_video_path = f"temp_{farmer_id}.mp4"
+    compressed_video_path = f"compressed_{farmer_id}.mp4"
+    invoice_pdf_path = f"invoice_{farmer_id}.pdf"
+
+    try:
+        # 1. Save uploaded file temporarily
+        with open(temp_video_path, "wb") as buffer:
+            shutil.copyfileobj(video.file, buffer)
+
+        # 2. Compress Video to 360p
+        compress_video(temp_video_path, compressed_video_path)
+
+        # 3. Upload Video to Google Drive
+        drive_service = GoogleDriveService(
+            credentials_file="google_drive_credentials.json",
+            folder_id=os.environ.get("GOOGLE_DRIVE_FOLDER_ID", "")
+        )
+        video_url = drive_service.upload_file(compressed_video_path, f"Proof_{farmer_id}.mp4")
+
+        # 4. Generate Invoice (Using the Drive Link)
+        generate_invoice(
+            output_path=invoice_pdf_path,
+            farmer_name=farmer.get("name", "Unknown"),
+            farmer_address=farmer.get("address", "Unknown Address"),
+            farmer_district=farmer.get("district", ""),
+            video_link=video_url
+        )
+
+        # 5. Upload PDF Invoice to Google Drive (optional, but requested so it's a link)
+        invoice_url = drive_service.upload_file(invoice_pdf_path, f"Invoice_{farmer_id}.pdf", mime_type="application/pdf")
+
+        # 6. Update DB with delivery status and URLs
+        update_data = {
+            "status": DeliveryStatus.delivered,
+            "video_url": video_url,
+            "invoice_url": invoice_url
+        }
+        db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
+        farmer.update(update_data)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp files
+        for p in [temp_video_path, compressed_video_path, invoice_pdf_path]:
+            if os.path.exists(p):
+                os.remove(p)
+
     farmer["id"] = farmer["farmer_id"]
     farmer["items"] = farmer.get("items", [])
     return FarmerResponse(**farmer)

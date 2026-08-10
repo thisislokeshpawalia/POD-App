@@ -231,9 +231,22 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
 
     widget.onCustomerDelivered(widget.customer.id);
     if (!mounted) return;
-    await context.read<FarmerProvider>().markDelivered(widget.customer.id);
+    
+    bool success = false;
+    final provider = context.read<FarmerProvider>();
+    if (_videoPath != null) {
+       success = await provider.uploadProofAndMarkDelivered(widget.customer.id, _videoPath!);
+    } else {
+       success = await provider.markDelivered(widget.customer.id);
+    }
+    
     if (!mounted) return;
     setState(() => _isSubmitting = false);
+    
+    if (!success) {
+      _showErrorDialog(provider.errorMessage ?? 'An error occurred during submission.');
+      return;
+    }
 
     if (mounted) {
       Navigator.pushReplacement(

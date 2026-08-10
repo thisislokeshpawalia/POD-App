@@ -134,4 +134,21 @@ class FarmerProvider with ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> uploadProofAndMarkDelivered(String farmerId, String videoPath) async {
+    _errorMessage = null;
+    try {
+      final updated = await _farmerRepository.uploadProofAndMarkDelivered(farmerId, videoPath);
+      final index = _farmers.indexWhere((f) => f.id == farmerId);
+      if (index != -1) {
+        _farmers[index] = updated;
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

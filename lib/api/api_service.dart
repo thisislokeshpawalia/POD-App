@@ -97,6 +97,27 @@ class ApiService {
     }
   }
 
+  Future<dynamic> postMultipart(String endpoint, {required String filePath, required String fileField}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      var request = http.MultipartRequest('POST', uri);
+      if (_authToken != null && _authToken!.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+      
+      request.files.add(
+        await http.MultipartFile.fromPath(fileField, filePath)
+      );
+
+      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+      return _processResponse(response);
+    } catch (e) {
+      if (e is ApiException || e is UnauthenticatedException) rethrow;
+      throw _handleNetworkException(e);
+    }
+  }
+
   ApiException _handleNetworkException(dynamic e) {
     final str = e.toString();
     if (str.contains('Connection refused') || str.contains('errno = 111')) {
