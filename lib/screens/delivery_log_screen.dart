@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/delivery_log.dart';
+import '../services/invoice_service.dart';
 
 class DeliveryLogScreen extends StatelessWidget {
   final DeliveryLog deliveryLog;
@@ -142,26 +143,27 @@ class DeliveryLogScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            if (deliveryLog.customer.invoiceUrl != null) ...[
-              ElevatedButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse(deliveryLog.customer.invoiceUrl!);
-                  try {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint("Could not launch $uri");
-                  }
-                },
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Download Invoice'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0A4A6F),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  final path = await InvoiceService.generateInvoicePdf(
+                    customer: deliveryLog.customer,
+                    deliveryDate: deliveryLog.timestamp,
+                  );
+                  await OpenFilex.open(path);
+                } catch (e) {
+                  debugPrint("Error generating invoice: $e");
+                }
+              },
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Generate & View Invoice'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0A4A6F),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
+            const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onBackToHome,
               child: const Text('Back to Home'),
