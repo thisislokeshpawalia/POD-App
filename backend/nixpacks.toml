@@ -2,7 +2,7 @@ providers = ["...", "python"]
 [phases.setup]
   # "..." extends the default packages selected by Nixpacks based on the provider
   # Add ffmpeg since we use it for media processing
-  aptPkgs = ["...", "ffmpeg"]
+  nixPkgs = ["...", "ffmpeg"]
 
 [start]
   # Explicit start command to run the FastAPI app via Uvicorn
