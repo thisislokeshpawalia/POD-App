@@ -14,8 +14,25 @@ class InvoiceService {
   static Future<String> generateInvoicePdf({
     required Customer customer,
     required DateTime deliveryDate,
+    String? photoPath,
+    bool forceOverwrite = false,
   }) async {
     try {
+      final directory = await getApplicationDocumentsDirectory();
+      final invoiceDirectory = Directory('${directory.path}/invoices');
+
+      if (!await invoiceDirectory.exists()) {
+        await invoiceDirectory.create(recursive: true);
+      }
+
+      final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
+
+      // If the file already exists (likely has the photo) and we aren't forcing an overwrite,
+      // just return the existing file rather than generating a new one without the photo.
+      if (file.existsSync() && !forceOverwrite && photoPath == null) {
+        return file.path;
+      }
+
       final pdf = pw.Document();
 
       // App Theme Colors (Matching a clean pet-care aesthetic)
@@ -246,6 +263,25 @@ class InvoiceService {
                     ),
                   ],
 
+                  if (photoPath != null && File(photoPath).existsSync()) ...[
+                    pw.SizedBox(height: 20),
+                    pw.Text(
+                      'Proof of Delivery Photo:',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Image(
+                      pw.MemoryImage(File(photoPath).readAsBytesSync()),
+                      height: 200,
+                      fit: pw.BoxFit.contain,
+                      alignment: pw.Alignment.centerLeft,
+                    ),
+                  ],
+
                   pw.Spacer(),
 
                   // ==================================================
@@ -272,14 +308,6 @@ class InvoiceService {
       // ============================================================
       // FILE STORAGE HANDLING
       // ============================================================
-      final directory = await getApplicationDocumentsDirectory();
-      final invoiceDirectory = Directory('${directory.path}/invoices');
-
-      if (!await invoiceDirectory.exists()) {
-        await invoiceDirectory.create(recursive: true);
-      }
-
-      final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
       final pdfBytes = await pdf.save();
 
       await file.writeAsBytes(pdfBytes, flush: true);

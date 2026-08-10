@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
@@ -102,16 +103,58 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _photoFile = File(picked.path));
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final picked = await _picker.pickImage(source: source);
+      if (picked != null) {
+        setState(() => _photoFile = File(picked.path));
+      }
     }
   }
 
   Future<void> _pickVideo() async {
-    final picked = await _picker.pickVideo(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _videoPath = picked.path);
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.videocam),
+            title: const Text('Record a Video'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.video_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final picked = await _picker.pickVideo(source: source);
+      if (picked != null) {
+        setState(() => _videoPath = picked.path);
+      }
     }
   }
 
@@ -137,7 +180,18 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     );
   }
 
-
+  Future<void> _launchMaps() async {
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${widget.customer.latitude},${widget.customer.longitude}',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        _showErrorDialog('Could not launch maps. Please ensure Google Maps is installed.');
+      }
+    }
+  }
 
   Future<bool> _checkLocation() async {
     final position = await _getCurrentPosition();
@@ -334,14 +388,31 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.customer.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.customer.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _launchMaps,
+                          icon: const Icon(Icons.navigation, size: 16),
+                          label: const Text('Navigate'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       widget.customer.fullAddress,
                       style: TextStyle(color: Colors.grey.shade600),
@@ -470,9 +541,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickPhoto,
-                      icon: const Icon(Icons.photo_library_outlined),
+                      icon: const Icon(Icons.add_a_photo_outlined),
                       label: Text(
-                          _photoFile == null ? 'Upload Photo' : 'Change Photo'),
+                          _photoFile == null ? 'Add Photo' : 'Change Photo'),
                     ),
                   ],
                 ),
@@ -512,9 +583,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickVideo,
-                      icon: const Icon(Icons.video_library_outlined),
+                      icon: const Icon(Icons.video_call_outlined),
                       label: Text(_videoPath == null
-                          ? 'Upload Video'
+                          ? 'Add Video'
                           : 'Change Video'),
                     ),
                   ],
