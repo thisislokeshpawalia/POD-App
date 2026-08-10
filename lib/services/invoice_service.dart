@@ -14,6 +14,7 @@ class InvoiceService {
   static Future<String> generateInvoicePdf({
     required Customer customer,
     required DateTime deliveryDate,
+    String? photoPath,
   }) async {
     try {
       final pdf = pw.Document();
@@ -243,6 +244,25 @@ class InvoiceService {
                         fontSize: 8,
                         color: PdfColors.grey600,
                       ),
+                    ),
+                  ],
+
+                  if (photoPath != null && File(photoPath).existsSync()) ...[
+                    pw.SizedBox(height: 20),
+                    pw.Text(
+                      'Proof of Delivery Photo:',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Image(
+                      pw.MemoryImage(File(photoPath).readAsBytesSync()),
+                      height: 200,
+                      fit: pw.BoxFit.contain,
+                      alignment: pw.Alignment.centerLeft,
                     ),
                   ],
 

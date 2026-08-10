@@ -103,14 +103,14 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    final picked = await _picker.pickImage(source: ImageSource.camera);
     if (picked != null) {
       setState(() => _photoFile = File(picked.path));
     }
   }
 
   Future<void> _pickVideo() async {
-    final picked = await _picker.pickVideo(source: ImageSource.gallery);
+    final picked = await _picker.pickVideo(source: ImageSource.camera);
     if (picked != null) {
       setState(() => _videoPath = picked.path);
     }
@@ -499,9 +499,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickPhoto,
-                      icon: const Icon(Icons.photo_library_outlined),
+                      icon: const Icon(Icons.camera_alt_outlined),
                       label: Text(
-                          _photoFile == null ? 'Upload Photo' : 'Change Photo'),
+                          _photoFile == null ? 'Take Photo' : 'Retake Photo'),
                     ),
                   ],
                 ),
@@ -541,10 +541,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickVideo,
-                      icon: const Icon(Icons.video_library_outlined),
+                      icon: const Icon(Icons.videocam_outlined),
                       label: Text(_videoPath == null
-                          ? 'Upload Video'
-                          : 'Change Video'),
+                          ? 'Record Video'
+                          : 'Rerecord Video'),
                     ),
                   ],
                 ),
