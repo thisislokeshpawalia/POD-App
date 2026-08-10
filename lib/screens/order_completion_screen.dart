@@ -103,16 +103,58 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    final picked = await _picker.pickImage(source: ImageSource.camera);
-    if (picked != null) {
-      setState(() => _photoFile = File(picked.path));
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final picked = await _picker.pickImage(source: source);
+      if (picked != null) {
+        setState(() => _photoFile = File(picked.path));
+      }
     }
   }
 
   Future<void> _pickVideo() async {
-    final picked = await _picker.pickVideo(source: ImageSource.camera);
-    if (picked != null) {
-      setState(() => _videoPath = picked.path);
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.videocam),
+            title: const Text('Record a Video'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.video_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final picked = await _picker.pickVideo(source: source);
+      if (picked != null) {
+        setState(() => _videoPath = picked.path);
+      }
     }
   }
 
@@ -499,9 +541,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickPhoto,
-                      icon: const Icon(Icons.camera_alt_outlined),
+                      icon: const Icon(Icons.add_a_photo_outlined),
                       label: Text(
-                          _photoFile == null ? 'Take Photo' : 'Retake Photo'),
+                          _photoFile == null ? 'Add Photo' : 'Change Photo'),
                     ),
                   ],
                 ),
@@ -541,10 +583,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
                       onPressed: _pickVideo,
-                      icon: const Icon(Icons.videocam_outlined),
+                      icon: const Icon(Icons.video_call_outlined),
                       label: Text(_videoPath == null
-                          ? 'Record Video'
-                          : 'Rerecord Video'),
+                          ? 'Add Video'
+                          : 'Change Video'),
                     ),
                   ],
                 ),
