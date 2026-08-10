@@ -200,6 +200,21 @@ class CustomerDetailScreen extends StatelessWidget {
               ),
             if (isDelivered) ...[
               const SizedBox(height: 12),
+              if (customer.videoUrl != null && customer.videoUrl!.isNotEmpty) ...[
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse(customer.videoUrl!);
+                    try {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } catch (e) {
+                      debugPrint("Could not launch video: $e");
+                    }
+                  },
+                  icon: const Icon(Icons.play_circle_fill, color: Colors.red),
+                  label: const Text('Play Delivery Proof Video'),
+                ),
+                const SizedBox(height: 12),
+              ],
               ElevatedButton.icon(
                 onPressed: () async {
                   try {

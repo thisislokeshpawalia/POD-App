@@ -110,34 +110,51 @@ class DeliveryLogScreen extends StatelessWidget {
             _InfoCard(
               title: 'Proof of Delivery Video',
               children: [
-                Container(
-                  height: 80,
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        deliveryLog.videoPath != null
-                            ? Icons.video_file
-                            : Icons.videocam_off,
-                        color: deliveryLog.videoPath != null
-                            ? const Color(0xFF2E7D32)
-                            : Colors.grey.shade400,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
+                GestureDetector(
+                  onTap: () async {
+                    if (deliveryLog.videoPath != null) {
+                      try {
+                        await OpenFilex.open(deliveryLog.videoPath!);
+                      } catch (e) {
+                        debugPrint("Error opening video: $e");
+                      }
+                    }
+                  },
+                  child: Container(
+                    height: 80,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
                           deliveryLog.videoPath != null
-                              ? deliveryLog.videoPath!.split('/').last
-                              : 'No video uploaded',
-                          overflow: TextOverflow.ellipsis,
+                              ? Icons.play_circle_fill
+                              : Icons.videocam_off,
+                          color: deliveryLog.videoPath != null
+                              ? const Color(0xFF2E7D32)
+                              : Colors.grey.shade400,
+                          size: 32,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            deliveryLog.videoPath != null
+                                ? 'Tap to play video proof'
+                                : 'No video uploaded',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: deliveryLog.videoPath != null ? Colors.black87 : Colors.grey,
+                              fontWeight: deliveryLog.videoPath != null ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

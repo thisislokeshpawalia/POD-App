@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 import os
 import shutil
 from app.services.cloudinary_service import upload_video
-from app.services.video_compression import compress_video
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -130,12 +129,10 @@ async def upload_proof_of_delivery(
         with open(temp_video_path, "wb") as buffer:
             shutil.copyfileobj(video.file, buffer)
 
-        # 2. Compress Video to 360p
-        compress_video(temp_video_path, compressed_video_path)
+        # 2. Upload Video to Cloudinary
+        video_url = upload_video(temp_video_path, f"Proof_{farmer_id}")
 
-        # 3. Upload Video to Cloudinary
-        video_url = upload_video(compressed_video_path, f"Proof_{farmer_id}")
-
+        # 3. Update DB with delivery status and URLs
         update_data = {
             "status": DeliveryStatus.delivered,
             "video_url": video_url,
@@ -148,7 +145,7 @@ async def upload_proof_of_delivery(
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Cleanup temp files
-        for p in [temp_video_path, compressed_video_path]:
+        for p in [temp_video_path]:
             if os.path.exists(p):
                 os.remove(p)
 
