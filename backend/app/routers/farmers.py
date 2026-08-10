@@ -1,5 +1,9 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+import os
+import shutil
+from app.services.cloudinary_service import upload_video
+from app.services.video_compression import compress_video
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -102,6 +106,52 @@ def mark_delivered(
     db.farmers.update_one({"_id": farmer["_id"]}, {"$set": {"status": DeliveryStatus.delivered}})
     farmer["status"] = DeliveryStatus.delivered
     
+    farmer["id"] = farmer["farmer_id"]
+    farmer["items"] = farmer.get("items", [])
+    return FarmerResponse(**farmer)
+
+@router.post("/{farmer_id}/upload_proof", response_model=FarmerResponse)
+async def upload_proof_of_delivery(
+    farmer_id: str,
+    video: UploadFile = File(...),
+    db = Depends(get_db),
+    partner = Depends(get_current_partner),
+):
+    farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+
+    temp_video_path = f"temp_{farmer_id}.mp4"
+    compressed_video_path = f"compressed_{farmer_id}.mp4"
+    invoice_pdf_path = f"invoice_{farmer_id}.pdf"
+
+    try:
+        # 1. Save uploaded file temporarily
+        with open(temp_video_path, "wb") as buffer:
+            shutil.copyfileobj(video.file, buffer)
+
+        # 2. Compress Video to 360p
+        compress_video(temp_video_path, compressed_video_path)
+
+        # 3. Upload Video to Cloudinary
+        video_url = upload_video(compressed_video_path, f"Proof_{farmer_id}")
+
+        update_data = {
+            "status": DeliveryStatus.delivered,
+            "video_url": video_url,
+            "invoice_url": None
+        }
+        db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
+        farmer.update(update_data)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Cleanup temp files
+        for p in [temp_video_path, compressed_video_path]:
+            if os.path.exists(p):
+                os.remove(p)
+
     farmer["id"] = farmer["farmer_id"]
     farmer["items"] = farmer.get("items", [])
     return FarmerResponse(**farmer)

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/customer.dart';
+import '../services/invoice_service.dart';
 import 'order_completion_screen.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
@@ -196,6 +198,29 @@ class CustomerDetailScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            if (isDelivered) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    final path = await InvoiceService.generateInvoicePdf(
+                      customer: customer,
+                      deliveryDate: DateTime.now(), // Fallback for past deliveries
+                    );
+                    await OpenFilex.open(path);
+                  } catch (e) {
+                    debugPrint("Error generating invoice: $e");
+                  }
+                },
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Generate & View Invoice'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0A4A6F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
           ],
         ),

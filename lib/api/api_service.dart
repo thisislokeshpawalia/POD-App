@@ -48,7 +48,7 @@ class ApiService {
     }
 
     try {
-      final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 15));
+      final response = await _client.get(uri, headers: _headers).timeout(const Duration(seconds: 60));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -63,7 +63,7 @@ class ApiService {
         uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 60));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -78,7 +78,7 @@ class ApiService {
         uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 60));
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;
@@ -89,7 +89,28 @@ class ApiService {
   Future<dynamic> delete(String endpoint) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     try {
-      final response = await _client.delete(uri, headers: _headers).timeout(const Duration(seconds: 15));
+      final response = await _client.delete(uri, headers: _headers).timeout(const Duration(seconds: 60));
+      return _processResponse(response);
+    } catch (e) {
+      if (e is ApiException || e is UnauthenticatedException) rethrow;
+      throw _handleNetworkException(e);
+    }
+  }
+
+  Future<dynamic> postMultipart(String endpoint, {required String filePath, required String fileField}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      var request = http.MultipartRequest('POST', uri);
+      if (_authToken != null && _authToken!.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+      
+      request.files.add(
+        await http.MultipartFile.fromPath(fileField, filePath)
+      );
+
+      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } catch (e) {
       if (e is ApiException || e is UnauthenticatedException) rethrow;

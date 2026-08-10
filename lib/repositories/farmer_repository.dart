@@ -29,4 +29,8 @@ class FarmerRepository {
   Future<Customer> markDelivered(String farmerId) async {
     return await _farmerService.markDelivered(farmerId);
   }
+
+  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String videoPath) async {
+    return await _farmerService.uploadProofAndMarkDelivered(farmerId, videoPath);
+  }
 }

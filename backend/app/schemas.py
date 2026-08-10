@@ -119,6 +119,8 @@ class FarmerUpdate(BaseModel):
     longitude: Optional[float] = None
     otp: Optional[str] = None
     items: Optional[list[DeliveryItemCreate]] = None
+    video_url: Optional[str] = None
+    invoice_url: Optional[str] = None
 
 
 class FarmerResponse(BaseModel):
@@ -134,5 +136,7 @@ class FarmerResponse(BaseModel):
     longitude: float
     otp: str
     items: list[DeliveryItemResponse]
+    video_url: Optional[str] = None
+    invoice_url: Optional[str] = None
 
     model_config = {"from_attributes": True}

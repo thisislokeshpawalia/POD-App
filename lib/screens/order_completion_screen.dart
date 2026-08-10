@@ -83,7 +83,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       widget.customer.longitude,
     );
 
-    final isMatching = distance <= 200.0;
+    final isMatching = distance <= 600.0;
 
     if (mounted) {
       setState(() {
@@ -92,7 +92,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
           _locationMessage = "You reached customer's location";
         } else {
           _isAtLocation = false;
-          _locationMessage = "Location mismatch: You are ${distance.toStringAsFixed(0)}m away (limit: 200m)";
+          _locationMessage = "Location mismatch: You are ${distance.toStringAsFixed(0)}m away (limit: 600m)";
         }
       });
     }
@@ -155,10 +155,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       widget.customer.longitude,
     );
 
-    if (distance > 200.0) {
+    if (distance > 600.0) {
       if (mounted) {
         _showErrorDialog(
-          'You cannot complete this order because you are ${distance.toStringAsFixed(0)}m away.\n\nYou must be within 200m of the delivery address.',
+          'You cannot complete this order because you are ${distance.toStringAsFixed(0)}m away.\n\nYou must be within 600m of the delivery address.',
         );
       }
       return false;
@@ -219,21 +219,41 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       position = await _getCurrentPosition();
     } catch (_) {}
 
+    // We will build the log AFTER the successful submission so we can include generated URLs
+    widget.onCustomerDelivered(widget.customer.id);
+    if (!mounted) return;
+    
+    bool success = false;
+    final provider = context.read<FarmerProvider>();
+    if (_videoPath != null) {
+       success = await provider.uploadProofAndMarkDelivered(widget.customer.id, _videoPath!);
+    } else {
+       success = await provider.markDelivered(widget.customer.id);
+    }
+    
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+    
+    if (!success) {
+      _showErrorDialog(provider.errorMessage ?? 'An error occurred during submission.');
+      return;
+    }
+    
+    // Get updated customer with invoice and video URL
+    final updatedCustomer = provider.farmers.firstWhere(
+      (c) => c.id == widget.customer.id, 
+      orElse: () => widget.customer
+    );
+
     final log = DeliveryLog(
-      customer: widget.customer,
+      customer: updatedCustomer,
       timestamp: DateTime.now(),
-      latitude: position?.latitude ?? widget.customer.latitude,
-      longitude: position?.longitude ?? widget.customer.longitude,
-      items: widget.customer.items,
+      latitude: position?.latitude ?? updatedCustomer.latitude,
+      longitude: position?.longitude ?? updatedCustomer.longitude,
+      items: updatedCustomer.items,
       photoPath: _photoFile?.path,
       videoPath: _videoPath,
     );
-
-    widget.onCustomerDelivered(widget.customer.id);
-    if (!mounted) return;
-    await context.read<FarmerProvider>().markDelivered(widget.customer.id);
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
 
     if (mounted) {
       Navigator.pushReplacement(
