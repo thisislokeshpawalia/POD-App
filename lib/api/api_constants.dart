@@ -6,6 +6,8 @@ class ApiConstants {
   static const String customHost = '192.168.1.49';
 
   static String get baseUrl {
+    // TODO (Railway): Once deployed to Railway, replace the Render URL below with your new Railway URL
+    // return 'https://your-railway-app.up.railway.app';
     return 'https://pod-backend-1yr8.onrender.com';
   }
 
