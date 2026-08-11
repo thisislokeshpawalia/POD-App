@@ -58,11 +58,11 @@ class FarmerService {
     return Customer.fromJson(response);
   }
 
-  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String videoPath) async {
+  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, [List<String>? photoPaths]) async {
     final response = await _apiService.postMultipart(
       '/farmers/$farmerId/upload_proof',
-      filePath: videoPath,
-      fileField: 'video',
+      videoPath: videoPath,
+      photoPaths: photoPaths,
     );
     return Customer.fromJson(response);
   }

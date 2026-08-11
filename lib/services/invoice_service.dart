@@ -14,7 +14,7 @@ class InvoiceService {
   static Future<String> generateInvoicePdf({
     required Customer customer,
     required DateTime deliveryDate,
-    String? photoPath,
+    List<String> photoPaths = const [],
     bool forceOverwrite = false,
   }) async {
     try {
@@ -27,11 +27,8 @@ class InvoiceService {
 
       final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
 
-      // If the file already exists (likely has the photo) and we aren't forcing an overwrite,
-      // just return the existing file rather than generating a new one without the photo.
-      if (file.existsSync() && !forceOverwrite && photoPath == null) {
-        return file.path;
-      }
+      // Removed caching to ensure new changes (like photos/logos) are always visible.
+      // if (file.existsSync() && !forceOverwrite && photoPaths.isEmpty) { ... }
 
       final pdf = pw.Document();
 
@@ -41,14 +38,26 @@ class InvoiceService {
       const textColor = PdfColor.fromInt(0xFF333333);
 
       pdf.addPage(
-        pw.Page(
+        pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          footer: (pw.Context context) {
+            return pw.Column(children: [
+              pw.Divider(color: PdfColors.grey400),
+              pw.SizedBox(height: 10),
+              pw.Center(
+                child: pw.Text(
+                  'Thank you for your business! Give your pets the best care.',
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ),
+            ]);
+          },
           build: (context) {
-            return pw.Padding(
-              padding: const pw.EdgeInsets.all(32),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
+            return [
                   // ==================================================
                   // HEADER WITH BRANDING
                   // ==================================================
@@ -58,22 +67,37 @@ class InvoiceService {
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            'MyAnimal',
-                            style: pw.TextStyle(
-                              fontSize: 28,
-                              fontWeight: pw.FontWeight.bold,
-                              color: primaryColor,
+                          pw.RichText(
+                            text: pw.TextSpan(
+                              children: [
+                                pw.TextSpan(
+                                  text: 'My',
+                                  style: pw.TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#296ebb'),
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: 'Animal\n',
+                                  style: pw.TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#52a632'),
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: 'Leading the Animal Tech Revolution',
+                                  style: pw.TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#52a632'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           pw.SizedBox(height: 4),
-                          pw.Text(
-                            'Your Trusted Pet Care Partner',
-                            style: const pw.TextStyle(
-                              fontSize: 10,
-                              color: PdfColors.grey700,
-                            ),
-                          ),
                           pw.Text(
                             'Sector 132, Noida (default)',
                             style: const pw.TextStyle(
@@ -242,31 +266,39 @@ class InvoiceService {
                         color: primaryColor,
                       ),
                     ),
-                    pw.SizedBox(height: 4),
+                    pw.SizedBox(height: 8),
                     pw.UrlLink(
                       destination: customer.videoUrl!,
-                      child: pw.Text(
-                        'Tap here to view the Delivery Proof Video',
-                        style: const pw.TextStyle(
-                          color: PdfColors.blue,
-                          decoration: pw.TextDecoration.underline,
+                      child: pw.Container(
+                        width: 160,
+                        height: 90,
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColors.black,
+                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
+                        ),
+                        child: pw.Center(
+                          child: pw.SvgImage(
+                            svg: '<svg viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>',
+                            width: 32,
+                            height: 32,
+                          ),
                         ),
                       ),
                     ),
-                    pw.SizedBox(height: 2),
+                    pw.SizedBox(height: 4),
                     pw.Text(
-                      'URL: ${customer.videoUrl}',
+                      'Tap thumbnail to play video',
                       style: const pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.grey600,
+                        fontSize: 9,
+                        color: PdfColors.grey700,
                       ),
                     ),
                   ],
 
-                  if (photoPath != null && File(photoPath).existsSync()) ...[
+                  if (photoPaths.isNotEmpty) ...[
                     pw.SizedBox(height: 20),
                     pw.Text(
-                      'Proof of Delivery Photo:',
+                      'Proof of Delivery Photos:',
                       style: pw.TextStyle(
                         fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
@@ -274,33 +306,21 @@ class InvoiceService {
                       ),
                     ),
                     pw.SizedBox(height: 8),
-                    pw.Image(
-                      pw.MemoryImage(File(photoPath).readAsBytesSync()),
-                      height: 200,
-                      fit: pw.BoxFit.contain,
-                      alignment: pw.Alignment.centerLeft,
+                    pw.Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: photoPaths
+                          .where((path) => File(path).existsSync())
+                          .map((path) => pw.Image(
+                                pw.MemoryImage(File(path).readAsBytesSync()),
+                                height: 120,
+                                fit: pw.BoxFit.contain,
+                              ))
+                          .toList(),
                     ),
                   ],
 
-                  pw.Spacer(),
-
-                  // ==================================================
-                  // FOOTER
-                  // ==================================================
-                  pw.Divider(color: PdfColors.grey400),
-                  pw.SizedBox(height: 10),
-                  pw.Center(
-                    child: pw.Text(
-                      'Thank you for your business! Give your pets the best care.',
-                      style: const pw.TextStyle(
-                        fontSize: 10,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+            ];
           },
         ),
       );

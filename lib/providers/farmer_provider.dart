@@ -135,10 +135,10 @@ class FarmerProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> uploadProofAndMarkDelivered(String farmerId, String videoPath) async {
+  Future<bool> uploadProofAndMarkDelivered(String farmerId, String? videoPath, [List<String>? photoPaths]) async {
     _errorMessage = null;
     try {
-      final updated = await _farmerRepository.uploadProofAndMarkDelivered(farmerId, videoPath);
+      final updated = await _farmerRepository.uploadProofAndMarkDelivered(farmerId, videoPath, photoPaths);
       final index = _farmers.indexWhere((f) => f.id == farmerId);
       if (index != -1) {
         _farmers[index] = updated;

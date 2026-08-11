@@ -1,8 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 import os
 import shutil
-from app.services.cloudinary_service import upload_video
+from app.services.cloudinary_service import upload_video, upload_image
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -112,7 +112,8 @@ def mark_delivered(
 @router.post("/{farmer_id}/upload_proof", response_model=FarmerResponse)
 async def upload_proof_of_delivery(
     farmer_id: str,
-    video: UploadFile = File(...),
+    video: Optional[UploadFile] = File(None),
+    photos: Optional[List[UploadFile]] = File(None),
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
@@ -121,23 +122,32 @@ async def upload_proof_of_delivery(
         raise HTTPException(status_code=404, detail="Farmer not found")
 
     temp_video_path = f"temp_{farmer_id}.mp4"
-    compressed_video_path = f"compressed_{farmer_id}.mp4"
     invoice_pdf_path = f"invoice_{farmer_id}.pdf"
 
     try:
-        # 1. Save uploaded file temporarily
-        with open(temp_video_path, "wb") as buffer:
-            shutil.copyfileobj(video.file, buffer)
+        video_url = None
+        if video and video.filename:
+            with open(temp_video_path, "wb") as buffer:
+                shutil.copyfileobj(video.file, buffer)
+            video_url = upload_video(temp_video_path, f"Proof_{farmer_id}")
 
-        # 2. Upload Video to Cloudinary
-        video_url = upload_video(temp_video_path, f"Proof_{farmer_id}")
+        photo_urls = []
+        if photos:
+            for i, photo in enumerate(photos):
+                if not photo.filename: continue
+                tmp_p = f"temp_{farmer_id}_photo_{i}.jpg"
+                with open(tmp_p, "wb") as buffer:
+                    shutil.copyfileobj(photo.file, buffer)
+                url = upload_image(tmp_p, f"Proof_Img_{farmer_id}_{i}")
+                photo_urls.append(url)
+                if os.path.exists(tmp_p): os.remove(tmp_p)
 
-        # 3. Update DB with delivery status and URLs
         update_data = {
             "status": DeliveryStatus.delivered,
-            "video_url": video_url,
-            "invoice_url": None
         }
+        if video_url: update_data["video_url"] = video_url
+        if photo_urls: update_data["photo_urls"] = photo_urls
+
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)
 

@@ -30,7 +30,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
-  File? _photoFile;
+  final List<File> _photoFiles = [];
   String? _videoPath;
   bool _showOtpHint = false;
   bool _isSubmitting = false;
@@ -103,6 +103,11 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
+    if (_photoFiles.length >= 5) {
+      _showErrorDialog('You can only upload a maximum of 5 images.');
+      return;
+    }
+
     final ImageSource? source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (ctx) => Column(
@@ -123,9 +128,26 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     );
 
     if (source != null) {
-      final picked = await _picker.pickImage(source: source);
-      if (picked != null) {
-        setState(() => _photoFile = File(picked.path));
+      if (source == ImageSource.gallery) {
+        final List<XFile> picked = await _picker.pickMultiImage();
+        if (picked.isNotEmpty) {
+          setState(() {
+            for (var p in picked) {
+              if (_photoFiles.length < 5) {
+                _photoFiles.add(File(p.path));
+              }
+            }
+          });
+        }
+      } else {
+        final picked = await _picker.pickImage(source: source);
+        if (picked != null) {
+          setState(() {
+            if (_photoFiles.length < 5) {
+              _photoFiles.add(File(picked.path));
+            }
+          });
+        }
       }
     }
   }
@@ -253,8 +275,8 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     }
 
     // Validate photo
-    if (_photoFile == null) {
-      _showErrorDialog('Please upload a proof of delivery photo.');
+    if (_photoFiles.isEmpty) {
+      _showErrorDialog('Please upload at least 1 proof of delivery photo.\nMaximum allowed: 5');
       return;
     }
 
@@ -279,8 +301,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     
     bool success = false;
     final provider = context.read<FarmerProvider>();
-    if (_videoPath != null) {
-       success = await provider.uploadProofAndMarkDelivered(widget.customer.id, _videoPath!);
+    final photoPaths = _photoFiles.map((e) => e.path).toList();
+    if (_videoPath != null || photoPaths.isNotEmpty) {
+       success = await provider.uploadProofAndMarkDelivered(widget.customer.id, _videoPath, photoPaths);
     } else {
        success = await provider.markDelivered(widget.customer.id);
     }
@@ -305,7 +328,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       latitude: position?.latitude ?? updatedCustomer.latitude,
       longitude: position?.longitude ?? updatedCustomer.longitude,
       items: updatedCustomer.items,
-      photoPath: _photoFile?.path,
+      photoPaths: _photoFiles.map((e) => e.path).toList(),
       videoPath: _videoPath,
     );
 
@@ -528,23 +551,59 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    if (_photoFile != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          _photoFile!,
-                          height: 160,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
+                    if (_photoFiles.isNotEmpty)
+                      SizedBox(
+                        height: 100,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _photoFiles.length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    _photoFiles[index],
+                                    height: 100,
+                                    width: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _photoFiles.removeAt(index);
+                                      });
+                                    },
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black54,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: _pickPhoto,
-                      icon: const Icon(Icons.add_a_photo_outlined),
-                      label: Text(
-                          _photoFile == null ? 'Add Photo' : 'Change Photo'),
-                    ),
+                    if (_photoFiles.length < 5)
+                      OutlinedButton.icon(
+                        onPressed: _pickPhoto,
+                        icon: const Icon(Icons.add_a_photo_outlined),
+                        label: Text('Add Photo (${_photoFiles.length}/5)'),
+                      ),
                   ],
                 ),
               ),
