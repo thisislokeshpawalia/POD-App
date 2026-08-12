@@ -4,7 +4,6 @@ import os
 import shutil
 import uuid
 import json
-from deepface import DeepFace
 from app.services.cloudinary_service import upload_video, upload_image
 from app.auth import get_current_partner
 from app.database import get_db
@@ -73,6 +72,7 @@ def create_farmer(
             cloud_url = upload_image(photo_path, public_id=photo_filename)
             farmer_data["photo_urls"] = [cloud_url]
         except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
             # Fallback if cloudinary fails (though we should ideally raise an error)
             pass
         finally:
@@ -154,63 +154,9 @@ async def upload_proof_of_delivery(
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
-    # If photo proofs provided, verify the FIRST photo using DeepFace against the registered farmer photo
-    if photos and len(photos) > 0 and photos[0].filename:
-        # Save first photo locally to verify
-        first_photo = photos[0]
-        ext = first_photo.filename.split(".")[-1] if "." in first_photo.filename else "jpg"
-        delivery_photo_filename = f"delivery_{uuid.uuid4()}.{ext}"
-        delivery_photo_path = os.path.join(UPLOAD_DIR, delivery_photo_filename)
-        
-        with open(delivery_photo_path, "wb") as buffer:
-            shutil.copyfileobj(first_photo.file, buffer)
-        
-        # Rewind the file pointer so cloudinary can read it again later
-        first_photo.file.seek(0)
+    # Face verification is now done locally on the Flutter client before this endpoint is called.
+    pass
 
-        # DeepFace verify
-        farmer_photo_urls = farmer.get("photo_urls", [])
-        if farmer_photo_urls and len(farmer_photo_urls) > 0:
-            farmer_photo_url = farmer_photo_urls[0]
-            # Download the remote Cloudinary image to a temporary file for DeepFace
-            remote_photo_path = f"remote_farmer_{uuid.uuid4()}.jpg"
-            try:
-                import requests
-                r = requests.get(farmer_photo_url, stream=True)
-                if r.status_code == 200:
-                    with open(remote_photo_path, 'wb') as f:
-                        for chunk in r.iter_content(1024):
-                            f.write(chunk)
-                
-                if os.path.exists(remote_photo_path) and os.path.exists(delivery_photo_path):
-                    result = DeepFace.verify(
-                        img1_path=remote_photo_path, 
-                        img2_path=delivery_photo_path, 
-                        model_name="Facenet",  # Lighter model to prevent Railway OOM
-                        enforce_detection=False
-                    )
-                    if not result.get("verified"):
-                        raise HTTPException(
-                            status_code=400, 
-                            detail="Face mismatch! The person in the delivery photo does not match the registered farmer."
-                        )
-            except HTTPException:
-                raise
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Face verification error: {str(e)}")
-            finally:
-                if os.path.exists(remote_photo_path):
-                    os.remove(remote_photo_path)
-                if os.path.exists(delivery_photo_path):
-                    os.remove(delivery_photo_path)
-        else:
-            if os.path.exists(delivery_photo_path):
-                os.remove(delivery_photo_path)
-            # If they provided delivery photos but no registered photo, we can just proceed.
-            pass
-
-    elif farmer.get("photo_urls"):
-        raise HTTPException(status_code=400, detail="Delivery photo is required for face verification")
 
     temp_video_path = f"temp_{farmer_id}.mp4"
     try:

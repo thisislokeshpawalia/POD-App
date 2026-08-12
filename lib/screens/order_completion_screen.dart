@@ -9,6 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
+import '../services/face_recognition_service.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'delivery_log_screen.dart';
 
 // --- Premium Color Palette ---
@@ -293,6 +296,40 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       position = await _getCurrentPosition();
     } catch (_) {}
 
+    // --- TFLite Face Verification ---
+    if (widget.customer.photoUrls != null && widget.customer.photoUrls!.isNotEmpty) {
+      try {
+        final registeredPhotoUrl = widget.customer.photoUrls!.first;
+        final deliveryPhotoPath = _photoFiles.first.path;
+
+        // Download the registered photo to a temp file
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/temp_registered_face.jpg');
+        
+        final response = await http.get(Uri.parse(registeredPhotoUrl));
+        if (response.statusCode == 200) {
+          await tempFile.writeAsBytes(response.bodyBytes);
+          
+          // Verify
+          final isMatch = await FaceRecognitionService().verifyFaces(tempFile.path, deliveryPhotoPath);
+          if (!isMatch) {
+            setState(() => _isSubmitting = false);
+            _showErrorDialog('Face mismatch! The person in the delivery photo does not match the registered farmer.');
+            return;
+          }
+        }
+      } catch (e) {
+        setState(() => _isSubmitting = false);
+        _showErrorDialog('Face verification error: $e');
+        return;
+      }
+    } else {
+      setState(() => _isSubmitting = false);
+      _showErrorDialog('Farmer has no registered photo to verify against.');
+      return;
+    }
+    // --------------------------------
+
     widget.onCustomerDelivered(widget.customer.id);
     if (!mounted) return;
     
@@ -507,17 +544,25 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                   offset: const Offset(0, 4),
                                 )
                               ],
+                              image: (widget.customer.photoUrls != null && widget.customer.photoUrls!.isNotEmpty)
+                                  ? DecorationImage(
+                                      image: NetworkImage(widget.customer.photoUrls!.first),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                widget.customer.name.substring(0, 1).toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
+                            child: (widget.customer.photoUrls != null && widget.customer.photoUrls!.isNotEmpty)
+                                ? null
+                                : Center(
+                                    child: Text(
+                                      widget.customer.name.substring(0, 1).toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(

@@ -9,6 +9,4 @@ jinja2==3.1.5
 ffmpeg-python==0.2.0
 reportlab==4.0.8
 cloudinary==1.45.0
-deepface==0.0.91
-opencv-python==4.10.0.84
-tf-keras==2.17.0
+

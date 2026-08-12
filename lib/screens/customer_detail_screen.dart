@@ -61,23 +61,37 @@ class CustomerDetailScreen extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: colorScheme.primary,
-                    backgroundImage: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
-                        ? NetworkImage(customer.photoUrls!.first)
-                        : null,
-                    child: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
-                        ? null
-                        : Text(
+                  (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                      ? Container(
+                          width: 160,
+                          height: 160,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            image: DecorationImage(
+                              image: NetworkImage(customer.photoUrls!.first),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 50,
+                          backgroundColor: colorScheme.primary,
+                          child: Text(
                             customer.initials,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 32,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                  ),
+                        ),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(

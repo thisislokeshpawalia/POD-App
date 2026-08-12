@@ -49,6 +49,16 @@ class DeliveryLogScreen extends StatelessWidget {
             _InfoCard(
               title: 'Customer',
               children: [
+                if (deliveryLog.customer.photoUrls != null && deliveryLog.customer.photoUrls!.isNotEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundImage: NetworkImage(deliveryLog.customer.photoUrls!.first),
+                      ),
+                    ),
+                  ),
                 _InfoRow(label: 'Name', value: deliveryLog.customer.name),
                 _InfoRow(label: 'Farmer ID', value: deliveryLog.customer.id),
                 _InfoRow(label: 'Delivered At', value: formattedTime),
