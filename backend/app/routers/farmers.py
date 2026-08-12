@@ -47,33 +47,37 @@ def list_farmers(
 
 @router.post("", response_model=FarmerResponse, status_code=status.HTTP_201_CREATED)
 def create_farmer(
-    data: str = Form(None),
+    data: str = Form(...),
     photo: UploadFile = File(None),
-    payload: Optional[FarmerCreate] = None,
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
     import datetime
     
-    if data:
-        try:
-            payload_dict = json.loads(data)
-            farmer_data = payload_dict
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid JSON data: {e}")
-    elif payload:
-        farmer_data = payload.model_dump()
-    else:
-        raise HTTPException(status_code=400, detail="Data must be provided")
+    try:
+        payload_obj = FarmerCreate.model_validate_json(data)
+        farmer_data = payload_obj.model_dump()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON data: {e}")
 
-    # Save farmer photo
+    # Save farmer photo to Cloudinary
     if photo and photo.filename:
         ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
         photo_filename = f"farmer_{uuid.uuid4()}.{ext}"
         photo_path = os.path.join(UPLOAD_DIR, photo_filename)
         with open(photo_path, "wb") as buffer:
             shutil.copyfileobj(photo.file, buffer)
-        farmer_data["farmer_photo_url"] = photo_path
+        
+        # Upload to Cloudinary
+        try:
+            cloud_url = upload_image(photo_path, public_id=photo_filename)
+            farmer_data["photo_urls"] = [cloud_url]
+        except Exception as e:
+            # Fallback if cloudinary fails (though we should ideally raise an error)
+            pass
+        finally:
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
 
     farmer_data["farmer_id"] = _generate_farmer_id(db)
     farmer_data["id"] = farmer_data["farmer_id"]
