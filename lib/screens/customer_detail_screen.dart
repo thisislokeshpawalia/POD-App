@@ -64,14 +64,19 @@ class CustomerDetailScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 36,
                     backgroundColor: colorScheme.primary,
-                    child: Text(
-                      customer.initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    backgroundImage: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                        ? NetworkImage(customer.photoUrls!.first)
+                        : null,
+                    child: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                        ? null
+                        : Text(
+                            customer.initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 10),
                   Container(

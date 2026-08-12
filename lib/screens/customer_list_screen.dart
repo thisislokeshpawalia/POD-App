@@ -335,14 +335,19 @@ class _CustomerTile extends StatelessWidget {
               CircleAvatar(
                 radius: 26,
                 backgroundColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
-                child: Text(
-                  customer.initials,
-                  style: const TextStyle(
-                    color: Color(0xFF2E7D32),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                backgroundImage: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                    ? NetworkImage(customer.photoUrls!.first)
+                    : null,
+                child: (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                    ? null
+                    : Text(
+                        customer.initials,
+                        style: const TextStyle(
+                          color: Color(0xFF2E7D32),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(

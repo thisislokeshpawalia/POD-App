@@ -206,10 +206,15 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                  child: Text(
-                    farmer.initials,
-                    style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
-                  ),
+                  backgroundImage: (farmer.photoUrls != null && farmer.photoUrls!.isNotEmpty)
+                      ? NetworkImage(farmer.photoUrls!.first)
+                      : null,
+                  child: (farmer.photoUrls != null && farmer.photoUrls!.isNotEmpty)
+                      ? null
+                      : Text(
+                          farmer.initials,
+                          style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

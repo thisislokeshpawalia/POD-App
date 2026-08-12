@@ -169,29 +169,47 @@ async def upload_proof_of_delivery(
         first_photo.file.seek(0)
 
         # DeepFace verify
-        farmer_photo_url = farmer.get("farmer_photo_url")
-        if farmer_photo_url and os.path.exists(farmer_photo_url):
+        farmer_photo_urls = farmer.get("photo_urls", [])
+        if farmer_photo_urls and len(farmer_photo_urls) > 0:
+            farmer_photo_url = farmer_photo_urls[0]
+            # Download the remote Cloudinary image to a temporary file for DeepFace
+            remote_photo_path = f"remote_farmer_{uuid.uuid4()}.jpg"
             try:
-                result = DeepFace.verify(
-                    img1_path=farmer_photo_url, 
-                    img2_path=delivery_photo_path, 
-                    enforce_detection=False
-                )
-                if not result.get("verified"):
-                    os.remove(delivery_photo_path)
-                    raise HTTPException(
-                        status_code=400, 
-                        detail="Face mismatch! The person in the delivery photo does not match the registered farmer."
+                import requests
+                r = requests.get(farmer_photo_url, stream=True)
+                if r.status_code == 200:
+                    with open(remote_photo_path, 'wb') as f:
+                        for chunk in r.iter_content(1024):
+                            f.write(chunk)
+                
+                if os.path.exists(remote_photo_path) and os.path.exists(delivery_photo_path):
+                    result = DeepFace.verify(
+                        img1_path=remote_photo_path, 
+                        img2_path=delivery_photo_path, 
+                        model_name="Facenet",  # Lighter model to prevent Railway OOM
+                        enforce_detection=False
                     )
+                    if not result.get("verified"):
+                        raise HTTPException(
+                            status_code=400, 
+                            detail="Face mismatch! The person in the delivery photo does not match the registered farmer."
+                        )
             except HTTPException:
                 raise
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Face verification error: {str(e)}")
-        
-        # Clean up local delivery proof
-        if os.path.exists(delivery_photo_path):
-            os.remove(delivery_photo_path)
-    elif farmer.get("farmer_photo_url"):
+            finally:
+                if os.path.exists(remote_photo_path):
+                    os.remove(remote_photo_path)
+                if os.path.exists(delivery_photo_path):
+                    os.remove(delivery_photo_path)
+        else:
+            if os.path.exists(delivery_photo_path):
+                os.remove(delivery_photo_path)
+            # If they provided delivery photos but no registered photo, we can just proceed.
+            pass
+
+    elif farmer.get("photo_urls"):
         raise HTTPException(status_code=400, detail="Delivery photo is required for face verification")
 
     temp_video_path = f"temp_{farmer_id}.mp4"
