@@ -130,14 +130,6 @@ class ApiService {
         }
       }
 
-      if (photoPaths != null && photoPaths.isNotEmpty) {
-        for (final path in photoPaths) {
-          request.files.add(
-            await http.MultipartFile.fromPath('photos', path)
-          );
-        }
-      }
-
       final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
