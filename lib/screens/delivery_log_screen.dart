@@ -80,30 +80,45 @@ class DeliveryLogScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _InfoCard(
-              title: 'Proof of Delivery Photo',
+              title: 'Proof of Delivery Photos',
               children: [
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: deliveryLog.photoPath != null
-                      ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(deliveryLog.photoPath!),
-                      fit: BoxFit.cover,
+                if (deliveryLog.photoPaths != null && deliveryLog.photoPaths!.isNotEmpty)
+                  SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: deliveryLog.photoPaths!.length,
+                      itemBuilder: (context, index) {
+                        return Container(
+                          width: 140,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: FileImage(File(deliveryLog.photoPaths![index])),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   )
-                      : Center(
-                    child: Text(
-                      'No photo',
-                      style: TextStyle(color: Colors.grey.shade500),
+                else
+                  Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'No photo',
+                        style: TextStyle(color: Colors.grey.shade500),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -166,7 +181,7 @@ class DeliveryLogScreen extends StatelessWidget {
                   final path = await InvoiceService.generateInvoicePdf(
                     customer: deliveryLog.customer,
                     deliveryDate: deliveryLog.timestamp,
-                    photoPath: deliveryLog.photoPath,
+                    photoPaths: deliveryLog.photoPaths,
                   );
                   await OpenFilex.open(path);
                 } catch (e) {

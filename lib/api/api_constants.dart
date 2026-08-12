@@ -6,7 +6,7 @@ class ApiConstants {
   static const String customHost = '192.168.1.49';
 
   static String get baseUrl {
-    return 'https://pod-backend-1yr8.onrender.com';
+    return 'https://pod-app-production-818a.up.railway.app';
   }
 
   // Auth

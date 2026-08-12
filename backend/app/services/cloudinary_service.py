@@ -39,3 +39,13 @@ def upload_pdf(file_path: str, public_id: str) -> str:
     )
     
     return response.get("secure_url")
+
+def upload_image(file_path: str, public_id: str) -> str:
+    setup_cloudinary()
+    response = cloudinary.uploader.upload(
+        file_path,
+        resource_type="image",
+        public_id=public_id,
+        folder="pod_proofs",
+    )
+    return response.get("secure_url")

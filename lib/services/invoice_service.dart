@@ -14,7 +14,7 @@ class InvoiceService {
   static Future<String> generateInvoicePdf({
     required Customer customer,
     required DateTime deliveryDate,
-    String? photoPath,
+    List<String>? photoPaths,
     bool forceOverwrite = false,
   }) async {
     try {
@@ -29,7 +29,7 @@ class InvoiceService {
 
       // If the file already exists (likely has the photo) and we aren't forcing an overwrite,
       // just return the existing file rather than generating a new one without the photo.
-      if (file.existsSync() && !forceOverwrite && photoPath == null) {
+      if (file.existsSync() && !forceOverwrite && (photoPaths == null || photoPaths.isEmpty)) {
         return file.path;
       }
 
@@ -41,15 +41,12 @@ class InvoiceService {
       const textColor = PdfColor.fromInt(0xFF333333);
 
       pdf.addPage(
-        pw.Page(
+        pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
           build: (context) {
-            return pw.Padding(
-              padding: const pw.EdgeInsets.all(32),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  // ==================================================
+            return [
+              // ==================================================
                   // HEADER WITH BRANDING
                   // ==================================================
                   pw.Row(
@@ -263,10 +260,10 @@ class InvoiceService {
                     ),
                   ],
 
-                  if (photoPath != null && File(photoPath).existsSync()) ...[
+                  if (photoPaths != null && photoPaths.isNotEmpty) ...[
                     pw.SizedBox(height: 20),
                     pw.Text(
-                      'Proof of Delivery Photo:',
+                      'Proof of Delivery Photos:',
                       style: pw.TextStyle(
                         fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
@@ -274,11 +271,18 @@ class InvoiceService {
                       ),
                     ),
                     pw.SizedBox(height: 8),
-                    pw.Image(
-                      pw.MemoryImage(File(photoPath).readAsBytesSync()),
-                      height: 200,
-                      fit: pw.BoxFit.contain,
-                      alignment: pw.Alignment.centerLeft,
+                    pw.Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: photoPaths
+                          .where((path) => File(path).existsSync())
+                          .map((path) => pw.Image(
+                                pw.MemoryImage(File(path).readAsBytesSync()),
+                                height: 200,
+                                fit: pw.BoxFit.contain,
+                                alignment: pw.Alignment.centerLeft,
+                              ))
+                          .toList(),
                     ),
                   ],
 
@@ -298,9 +302,7 @@ class InvoiceService {
                       ),
                     ),
                   ),
-                ],
-              ),
-            );
+            ];
           },
         ),
       );

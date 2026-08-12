@@ -48,6 +48,8 @@ class Customer {
   final String otp;
   final String? videoUrl;
   final String? invoiceUrl;
+  final String? farmerPhotoUrl;
+  final List<String>? photoUrls;
 
   Customer({
     required this.id,
@@ -64,6 +66,8 @@ class Customer {
     this.otp = '1234',
     this.videoUrl,
     this.invoiceUrl,
+    this.farmerPhotoUrl,
+    this.photoUrls,
   });
 
   String get initials {
@@ -111,6 +115,8 @@ class Customer {
       items: itemsList,
       videoUrl: json['video_url'],
       invoiceUrl: json['invoice_url'],
+      farmerPhotoUrl: json['farmer_photo_url'],
+      photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls']) : null,
     );
   }
 

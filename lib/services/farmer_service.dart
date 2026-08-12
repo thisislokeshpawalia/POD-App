@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../api/api_constants.dart';
 import '../api/api_service.dart';
 import '../models/customer.dart';
@@ -31,10 +32,12 @@ class FarmerService {
     return Customer.fromJson(response);
   }
 
-  Future<Customer> createFarmer(Customer customer) async {
-    final response = await _apiService.post(
+  Future<Customer> createFarmer(Customer customer, String photoPath) async {
+    final response = await _apiService.sendMultipart(
       ApiConstants.farmers,
-      body: customer.toCreateJson(),
+      method: 'POST',
+      fields: {'data': jsonEncode(customer.toCreateJson())},
+      files: {'photo': photoPath},
     );
     return Customer.fromJson(response);
   }
@@ -58,11 +61,19 @@ class FarmerService {
     return Customer.fromJson(response);
   }
 
-  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String videoPath) async {
-    final response = await _apiService.postMultipart(
+  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths) async {
+    final Map<String, dynamic> files = {};
+    if (videoPath != null) {
+      files['video'] = videoPath;
+    }
+    if (photoPaths.isNotEmpty) {
+      files['photos'] = photoPaths;
+    }
+
+    final response = await _apiService.sendMultipart(
       '/farmers/$farmerId/upload_proof',
-      filePath: videoPath,
-      fileField: 'video',
+      method: 'POST',
+      files: files,
     );
     return Customer.fromJson(response);
   }
