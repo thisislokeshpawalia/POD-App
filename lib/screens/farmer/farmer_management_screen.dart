@@ -21,20 +21,22 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
   }
 
   Future<void> _openAddFarmerDialog() async {
-    final newFarmer = await Navigator.push<Customer>(
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (_) => const FarmerFormDialog()),
     );
 
-    if (newFarmer != null && mounted) {
-      final success = await context.read<FarmerProvider>().addFarmer(newFarmer);
+    if (result != null && mounted) {
+      final Customer newFarmer = result['customer'];
+      final String photoPath = result['photoPath'];
+      final success = await context.read<FarmerProvider>().addFarmer(newFarmer, photoPath);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               success ? 'Farmer created successfully!' : 'Failed to create farmer',
             ),
-            backgroundColor: success ? const Color(0xFF2E7D32) : Colors.red,
+            backgroundColor: success ? const Color(0xFF6366F1) : Colors.red,
           ),
         );
       }
@@ -42,12 +44,13 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
   }
 
   Future<void> _openEditFarmerDialog(Customer farmer) async {
-    final updatedFarmer = await Navigator.push<Customer>(
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (_) => FarmerFormDialog(farmer: farmer)),
     );
 
-    if (updatedFarmer != null && mounted) {
+    if (result != null && mounted) {
+      final Customer updatedFarmer = result['customer'];
       final success = await context
           .read<FarmerProvider>()
           .updateFarmer(farmer.id, updatedFarmer);
@@ -57,7 +60,7 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
             content: Text(
               success ? 'Farmer updated successfully!' : 'Failed to update farmer',
             ),
-            backgroundColor: success ? const Color(0xFF2E7D32) : Colors.red,
+            backgroundColor: success ? const Color(0xFF6366F1) : Colors.red,
           ),
         );
       }
@@ -92,7 +95,7 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
             content: Text(
               success ? 'Farmer deleted successfully!' : 'Failed to delete farmer',
             ),
-            backgroundColor: success ? const Color(0xFF2E7D32) : Colors.red,
+            backgroundColor: success ? const Color(0xFF6366F1) : Colors.red,
           ),
         );
       }
@@ -116,14 +119,14 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddFarmerDialog,
-        backgroundColor: const Color(0xFF2E7D32),
+        backgroundColor: const Color(0xFF6366F1),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add),
         label: const Text('Add Farmer'),
       ),
       body: RefreshIndicator(
         onRefresh: () => provider.refreshFarmers(),
-        color: const Color(0xFF2E7D32),
+        color: const Color(0xFF6366F1),
         child: _buildBody(provider),
       ),
     );
@@ -132,7 +135,7 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
   Widget _buildBody(FarmerProvider provider) {
     if (provider.isLoading && provider.farmers.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF2E7D32)),
+        child: CircularProgressIndicator(color: Color(0xFF6366F1)),
       );
     }
 
@@ -202,10 +205,10 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
+                  backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.15),
                   child: Text(
                     farmer.initials,
-                    style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -220,7 +223,7 @@ class _FarmerManagementScreenState extends State<FarmerManagementScreen> {
                       const SizedBox(height: 2),
                       Text('${farmer.village}, ${farmer.district}', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                       Text('Phone: ${farmer.phone}', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                      Text('${farmer.items.length} items', style: const TextStyle(color: Color(0xFF2E7D32), fontSize: 12, fontWeight: FontWeight.w500)),
+                      Text('${farmer.items.length} items', style: const TextStyle(color: Color(0xFF6366F1), fontSize: 12, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

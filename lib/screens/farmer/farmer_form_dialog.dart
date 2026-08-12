@@ -1,11 +1,21 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/customer.dart';
 
+// --- Premium Color Palette ---
+const Color _kPrimary = Color(0xFF6366F1); // Indigo 500
+const Color _kBackground = Color(0xFFF8FAFC); // Slate 50
+const Color _kSurface = Colors.white;
+const Color _kTextPrimary = Color(0xFF0F172A); // Slate 900
+const Color _kTextSecondary = Color(0xFF64748B); // Slate 500
+
 class FarmerFormDialog extends StatefulWidget {
-  final Customer? farmer; // Null when creating new farmer, non-null when updating
+  final Customer? farmer;
 
   const FarmerFormDialog({super.key, this.farmer});
 
@@ -15,6 +25,8 @@ class FarmerFormDialog extends StatefulWidget {
 
 class _FarmerFormDialogState extends State<FarmerFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _picker = ImagePicker();
+  
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _villageController;
@@ -25,6 +37,7 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
   late TextEditingController _lngController;
   late TextEditingController _otpController;
 
+  File? _photoFile;
   final List<_ItemControllerGroup> _itemGroups = [];
   bool _isLocating = false;
 
@@ -105,6 +118,26 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
     }
   }
 
+  Future<void> _pickPhoto() async {
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.front,
+      );
+      if (picked != null) {
+        setState(() {
+          _photoFile = File(picked.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to take photo: $e')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -143,6 +176,17 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+    
+    final isCreating = widget.farmer == null;
+    if (isCreating && _photoFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Farmer photo is required for face verification later.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
 
     final items = _itemGroups.map((g) {
       return DeliveryItem(
@@ -167,7 +211,33 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
       items: items,
     );
 
-    Navigator.pop(context, result);
+    // Return a map containing both the customer and the photo path (if any)
+    Navigator.pop(context, {
+      'customer': result,
+      'photoPath': _photoFile?.path,
+    });
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: _kTextSecondary),
+      filled: true,
+      fillColor: _kBackground,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _kPrimary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    );
   }
 
   @override
@@ -175,225 +245,354 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
     final isEditing = widget.farmer != null;
 
     return Scaffold(
+      backgroundColor: _kBackground,
       appBar: AppBar(
-        title: Text(isEditing ? 'Update Farmer' : 'Add New Farmer'),
+        title: Text(isEditing ? 'Update Farmer' : 'Add New Farmer', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        backgroundColor: _kSurface,
+        foregroundColor: _kTextPrimary,
+        elevation: 0,
+        centerTitle: true,
         actions: [
           TextButton(
             onPressed: _save,
-            child: const Text('SAVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('SAVE', style: TextStyle(color: _kPrimary, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Photo Section
+              if (!isEditing) ...[
+                const Text(
+                  'Farmer Photo (Mandatory)',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kPrimary, letterSpacing: 1.1),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: _pickPhoto,
+                  child: Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: _kSurface,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _kTextPrimary.withValues(alpha: 0.04),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                      image: _photoFile != null
+                          ? DecorationImage(
+                              image: FileImage(_photoFile!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: _photoFile == null
+                        ? const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.face, size: 48, color: _kPrimary),
+                              SizedBox(height: 12),
+                              Text(
+                                'Tap to capture face',
+                                style: TextStyle(color: _kTextSecondary, fontWeight: FontWeight.w600),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Used for delivery verification',
+                                style: TextStyle(color: _kTextSecondary, fontSize: 12),
+                              ),
+                            ],
+                          )
+                        : Container(
+                            alignment: Alignment.bottomRight,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)],
+                              ),
+                            ),
+                            child: const Icon(Icons.camera_alt, color: Colors.white),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+
               // Basic Information
               const Text(
-                'Farmer Personal Details',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                'PERSONAL DETAILS',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kPrimary, letterSpacing: 1.1),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Farmer Name *', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                maxLength: 10,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number *',
-                  prefixText: '+91 ',
-                  border: OutlineInputBorder(),
-                  counterText: '',
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: _kTextPrimary.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
                 ),
-                validator: (v) => (v == null || v.trim().length != 10) ? '10-digit phone required' : null,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: _inputDecoration('Farmer Name'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: _inputDecoration('Phone Number').copyWith(
+                        prefixText: '+91 ',
+                        counterText: '',
+                      ),
+                      validator: (v) => (v == null || v.trim().length != 10) ? '10-digit phone required' : null,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 32),
 
               // Address Details
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Location Details',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                    'LOCATION',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kPrimary, letterSpacing: 1.1),
                   ),
                   if (_isLocating)
                     const Row(
                       children: [
-                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
-                        SizedBox(width: 6),
-                        Text('Fetching GPS...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: _kPrimary)),
+                        SizedBox(width: 8),
+                        Text('Fetching GPS...', style: TextStyle(fontSize: 12, color: _kTextSecondary, fontWeight: FontWeight.w600)),
                       ],
                     )
                   else if (!isEditing)
-                    TextButton.icon(
-                      onPressed: _fetchCurrentLocation,
-                      icon: const Icon(Icons.my_location, size: 16),
-                      label: const Text('Auto-fill', style: TextStyle(fontSize: 12)),
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+                    GestureDetector(
+                      onTap: _fetchCurrentLocation,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.my_location, size: 16, color: _kPrimary),
+                          SizedBox(width: 4),
+                          Text('Auto-fill', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kPrimary)),
+                        ],
+                      ),
                     )
                 ],
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _villageController,
-                decoration: const InputDecoration(labelText: 'Village *', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Village is required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address / House No. *', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Address is required' : null,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _districtController,
-                      decoration: const InputDecoration(labelText: 'District *', border: OutlineInputBorder()),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _pinCodeController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(labelText: 'Pincode *', border: OutlineInputBorder(), counterText: ''),
-                      validator: (v) => (v == null || v.trim().length != 6) ? '6 digits required' : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _latController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      decoration: const InputDecoration(labelText: 'Latitude *', border: OutlineInputBorder()),
-                      validator: (v) => (v == null || double.tryParse(v) == null) ? 'Invalid Lat' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _lngController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      decoration: const InputDecoration(labelText: 'Longitude *', border: OutlineInputBorder()),
-                      validator: (v) => (v == null || double.tryParse(v) == null) ? 'Invalid Lng' : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 4,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Delivery Verification OTP *',
-                  hintText: 'default 1234',
-                  border: OutlineInputBorder(),
-                  counterText: '',
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: _kTextPrimary.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
                 ),
-                validator: (v) => (v == null || v.trim().length != 4) ? '4-digit OTP required' : null,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _villageController,
+                      decoration: _inputDecoration('Village'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Village is required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _addressController,
+                      decoration: _inputDecoration('Address / House No.'),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Address is required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _districtController,
+                            decoration: _inputDecoration('District'),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _pinCodeController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: _inputDecoration('Pincode').copyWith(counterText: ''),
+                            validator: (v) => (v == null || v.trim().length != 6) ? '6 digits required' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _latController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: _inputDecoration('Latitude'),
+                            validator: (v) => (v == null || double.tryParse(v) == null) ? 'Invalid Lat' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lngController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                            decoration: _inputDecoration('Longitude'),
+                            validator: (v) => (v == null || double.tryParse(v) == null) ? 'Invalid Lng' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 32),
+
+              // Security Details
+              const Text(
+                'SECURITY',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kPrimary, letterSpacing: 1.1),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: _kSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(color: _kTextPrimary.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8)),
+                  ],
+                ),
+                child: TextFormField(
+                  controller: _otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 4,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: _inputDecoration('Delivery Verification OTP').copyWith(
+                    hintText: 'Default: 1234',
+                    counterText: '',
+                  ),
+                  validator: (v) => (v == null || v.trim().length != 4) ? '4-digit OTP required' : null,
+                ),
+              ),
+              const SizedBox(height: 32),
 
               // Items Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Delivery Items',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                    'DELIVERY ITEMS',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kPrimary, letterSpacing: 1.1),
                   ),
-                  TextButton.icon(
-                    onPressed: _addItem,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Item'),
+                  GestureDetector(
+                    onTap: _addItem,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _kPrimary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add, size: 16, color: _kPrimary),
+                          SizedBox(width: 4),
+                          Text('Add Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kPrimary)),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
               ...List.generate(_itemGroups.length, (index) {
                 final group = _itemGroups[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: TextFormField(
-                                controller: group.nameController,
-                                decoration: const InputDecoration(labelText: 'Item Name *', border: OutlineInputBorder()),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Item name required' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: group.quantityController,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Qty *', border: OutlineInputBorder()),
-                                validator: (v) => (v == null || double.tryParse(v) == null || double.parse(v) <= 0)
-                                    ? 'Invalid'
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: group.unitController,
-                                decoration: const InputDecoration(labelText: 'Unit *', border: OutlineInputBorder()),
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.red),
-                              onPressed: () => _removeItem(index),
-                            ),
-                          ],
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(color: _kTextPrimary.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextFormField(
+                          controller: group.nameController,
+                          decoration: _inputDecoration('Name'),
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: group.quantityController,
+                          keyboardType: TextInputType.number,
+                          decoration: _inputDecoration('Qty'),
+                          validator: (v) => (v == null || double.tryParse(v) == null || double.parse(v) <= 0) ? 'Invalid' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: group.unitController,
+                          decoration: _inputDecoration('Unit'),
+                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Req' : null,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                        onPressed: () => _removeItem(index),
+                      ),
+                    ],
                   ),
                 );
               }),
 
-              const SizedBox(height: 24),
-              ElevatedButton(
+              const SizedBox(height: 32),
+              FilledButton(
                 onPressed: _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _kPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 0,
                 ),
-                child: Text(isEditing ? 'Update Farmer' : 'Create Farmer', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: Text(
+                  isEditing ? 'Update Farmer Details' : 'Create Farmer',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
             ],
           ),
         ),

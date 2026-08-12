@@ -49,25 +49,25 @@ class SubsidyDeliveryApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E7D32),
-          primary: const Color(0xFF2E7D32),
-          secondary: const Color(0xFF66BB6A),
+          seedColor: const Color(0xFF6366F1),
+          primary: const Color(0xFF6366F1),
+          secondary: const Color(0xFF818CF8),
           surface: Colors.white,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2E7D32),
+          backgroundColor: Color(0xFF6366F1),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         chipTheme: ChipThemeData(
-          selectedColor: const Color(0xFF2E7D32).withValues(alpha: 0.15),
-          checkmarkColor: const Color(0xFF2E7D32),
+          selectedColor: const Color(0xFF6366F1).withValues(alpha: 0.15),
+          checkmarkColor: const Color(0xFF6366F1),
           labelStyle: const TextStyle(fontWeight: FontWeight.w500),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
+            backgroundColor: const Color(0xFF6366F1),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
             shape: RoundedRectangleBorder(
@@ -168,11 +168,11 @@ class AuthGate extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(color: Color(0xFF2E7D32)),
+                CircularProgressIndicator(color: Color(0xFF6366F1)),
                 SizedBox(height: 16),
                 Text(
                   'Connecting to Subsidy Delivery Backend...',
-                  style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.w500),
+                  style: TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.w500),
                 ),
               ],
             ),

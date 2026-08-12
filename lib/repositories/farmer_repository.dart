@@ -14,8 +14,8 @@ class FarmerRepository {
     return await _farmerService.getFarmer(farmerId);
   }
 
-  Future<Customer> createFarmer(Customer customer) async {
-    return await _farmerService.createFarmer(customer);
+  Future<Customer> createFarmer(Customer customer, String photoPath) async {
+    return await _farmerService.createFarmer(customer, photoPath);
   }
 
   Future<Customer> updateFarmer(String farmerId, Customer customer) async {
@@ -30,7 +30,7 @@ class FarmerRepository {
     return await _farmerService.markDelivered(farmerId);
   }
 
-  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, [List<String>? photoPaths]) async {
+  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths) async {
     return await _farmerService.uploadProofAndMarkDelivered(farmerId, videoPath, photoPaths);
   }
 }

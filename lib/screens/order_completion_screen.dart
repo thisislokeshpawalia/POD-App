@@ -11,6 +11,18 @@ import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
 import 'delivery_log_screen.dart';
 
+// --- Premium Color Palette ---
+const Color _kPrimary = Color(0xFF6366F1); // Indigo 500
+const Color _kPrimaryDark = Color(0xFF4338CA); // Indigo 700
+const Color _kBackground = Color(0xFFF8FAFC); // Slate 50
+const Color _kSurface = Colors.white;
+const Color _kTextPrimary = Color(0xFF0F172A); // Slate 900
+const Color _kTextSecondary = Color(0xFF64748B); // Slate 500
+const Color _kSuccess = Color(0xFF10B981); // Emerald 500
+const Color _kSuccessLight = Color(0xFFECFDF5); // Emerald 50
+const Color _kWarning = Color(0xFFF59E0B); // Amber 500
+const Color _kWarningLight = Color(0xFFFFFBEB); // Amber 50
+
 class OrderCompletionScreen extends StatefulWidget {
   final Customer customer;
   final void Function(String customerId) onCustomerDelivered;
@@ -25,22 +37,56 @@ class OrderCompletionScreen extends StatefulWidget {
   State<OrderCompletionScreen> createState() => _OrderCompletionScreenState();
 }
 
-class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
+class _OrderCompletionScreenState extends State<OrderCompletionScreen> with SingleTickerProviderStateMixin {
   final _picker = ImagePicker();
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
-  final List<File> _photoFiles = [];
+  List<File> _photoFiles = [];
   String? _videoPath;
   bool _showOtpHint = false;
   bool _isSubmitting = false;
   bool _isAtLocation = false;
   String _locationMessage = 'Checking location...';
 
+  late AnimationController _animationController;
+  late List<Animation<double>> _fadeAnimations;
+  late List<Animation<Offset>> _slideAnimations;
 
+  @override
+  void initState() {
+    super.initState();
+    
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    _fadeAnimations = List.generate(6, (index) {
+      return Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(index * 0.1, 0.6 + index * 0.05, curve: Curves.easeOut),
+        ),
+      );
+    });
+
+    _slideAnimations = List.generate(6, (index) {
+      return Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(index * 0.1, 0.6 + index * 0.05, curve: Curves.easeOutCubic),
+        ),
+      );
+    });
+
+    _animationController.forward();
+    _checkInitialLocation();
+  }
 
   @override
   void dispose() {
+    _animationController.dispose();
     for (final c in _otpControllers) {
       c.dispose();
     }
@@ -52,12 +98,6 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
 
   String get _enteredOtp =>
       _otpControllers.map((c) => c.text.trim()).join();
-
-  @override
-  void initState() {
-    super.initState();
-    _checkInitialLocation();
-  }
 
   Future<void> _checkInitialLocation() async {
     if (mounted) {
@@ -103,52 +143,15 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
   Future<void> _pickPhoto() async {
-    if (_photoFiles.length >= 5) {
-      _showErrorDialog('You can only upload a maximum of 5 images.');
-      return;
-    }
-
-    final ImageSource? source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Take a Photo'),
-            onTap: () => Navigator.pop(ctx, ImageSource.camera),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Choose from Gallery'),
-            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-          ),
-        ],
-      ),
-    );
-
-    if (source != null) {
-      if (source == ImageSource.gallery) {
-        final List<XFile> picked = await _picker.pickMultiImage();
-        if (picked.isNotEmpty) {
-          setState(() {
-            for (var p in picked) {
-              if (_photoFiles.length < 5) {
-                _photoFiles.add(File(p.path));
-              }
-            }
-          });
+    final picked = await _picker.pickMultiImage(imageQuality: 80);
+    if (picked.isNotEmpty) {
+      setState(() {
+        for (var file in picked) {
+          if (_photoFiles.length < 5) {
+            _photoFiles.add(File(file.path));
+          }
         }
-      } else {
-        final picked = await _picker.pickImage(source: source);
-        if (picked != null) {
-          setState(() {
-            if (_photoFiles.length < 5) {
-              _photoFiles.add(File(picked.path));
-            }
-          });
-        }
-      }
+      });
     }
   }
 
@@ -202,19 +205,6 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     );
   }
 
-  Future<void> _launchMaps() async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=${widget.customer.latitude},${widget.customer.longitude}',
-    );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        _showErrorDialog('Could not launch maps. Please ensure Google Maps is installed.');
-      }
-    }
-  }
-
   Future<bool> _checkLocation() async {
     final position = await _getCurrentPosition();
     if (position == null) {
@@ -249,10 +239,22 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cannot Complete Order'),
-        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: _kSurface,
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 28),
+            SizedBox(width: 12),
+            Text('Action Denied', style: TextStyle(color: _kTextPrimary, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(message, style: const TextStyle(color: _kTextSecondary, height: 1.5)),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: _kPrimary,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             onPressed: () => Navigator.pop(ctx),
             child: const Text('OK'),
           ),
@@ -264,7 +266,6 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
   // ─── Submit ────────────────────────────────────────────────────────────────
 
   Future<void> _submitDelivery() async {
-    // Validate OTP
     if (_enteredOtp.length != 4) {
       _showErrorDialog('Please enter the 4-digit OTP to complete the order.');
       return;
@@ -274,39 +275,34 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       return;
     }
 
-    // Validate photo
     if (_photoFiles.isEmpty) {
-      _showErrorDialog('Please upload at least 1 proof of delivery photo.\nMaximum allowed: 5');
+      _showErrorDialog('Please upload at least one proof of delivery photo for verification.');
       return;
     }
 
     setState(() => _isSubmitting = true);
 
-    // Check location
     final atLocation = await _checkLocation();
     if (!atLocation) {
       setState(() => _isSubmitting = false);
       return;
     }
 
-    // Get current position for log (use customer coords as fallback)
     Position? position;
     try {
       position = await _getCurrentPosition();
     } catch (_) {}
 
-    // We will build the log AFTER the successful submission so we can include generated URLs
     widget.onCustomerDelivered(widget.customer.id);
     if (!mounted) return;
     
     bool success = false;
     final provider = context.read<FarmerProvider>();
-    final photoPaths = _photoFiles.map((e) => e.path).toList();
-    if (_videoPath != null || photoPaths.isNotEmpty) {
-       success = await provider.uploadProofAndMarkDelivered(widget.customer.id, _videoPath, photoPaths);
-    } else {
-       success = await provider.markDelivered(widget.customer.id);
-    }
+    success = await provider.uploadProofAndMarkDelivered(
+      widget.customer.id, 
+      _videoPath, 
+      _photoFiles.map((e) => e.path).toList(),
+    );
     
     if (!mounted) return;
     setState(() => _isSubmitting = false);
@@ -316,7 +312,6 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
       return;
     }
     
-    // Get updated customer with invoice and video URL
     final updatedCustomer = provider.farmers.firstWhere(
       (c) => c.id == widget.customer.id, 
       orElse: () => widget.customer
@@ -335,12 +330,16 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (builderCtx) => DeliveryLogScreen(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 400),
+          pageBuilder: (context, animation, secondaryAnimation) => DeliveryLogScreen(
             deliveryLog: log,
             onBackToHome: () =>
-                Navigator.popUntil(builderCtx, (route) => route.isFirst),
+                Navigator.popUntil(context, (route) => route.isFirst),
           ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
         ),
       );
     }
@@ -348,329 +347,699 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> {
 
   // ─── Build ─────────────────────────────────────────────────────────────────
 
+  Widget _buildAnimatedItem(int index, Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnimations[index],
+      child: SlideTransition(
+        position: _slideAnimations[index],
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complete Delivery'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Navigate back to the customer list screen
-            Navigator.popUntil(context, (route) => route.isFirst);
-          },
+    // Applying local Theme override to ensure colors pop
+    return Theme(
+      data: Theme.of(context).copyWith(
+        scaffoldBackgroundColor: _kBackground,
+        primaryColor: _kPrimary,
+        colorScheme: ColorScheme.light(
+          primary: _kPrimary,
+          secondary: _kPrimaryDark,
+          surface: _kSurface,
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Proximity UI Message
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: _isAtLocation ? Colors.green.shade50 : Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _isAtLocation ? Colors.green.shade300 : Colors.orange.shade300,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _isAtLocation ? Icons.check_circle : Icons.location_off,
-                    color: _isAtLocation ? Colors.green.shade700 : Colors.orange.shade800,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _locationMessage,
-                      style: TextStyle(
-                        color: _isAtLocation ? Colors.green.shade700 : Colors.orange.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Complete Delivery', 
+            style: TextStyle(
+              fontWeight: FontWeight.w700, 
+              color: _kTextPrimary,
+              letterSpacing: -0.5,
+            )
+          ),
+          centerTitle: true,
+          backgroundColor: _kBackground,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          iconTheme: const IconThemeData(color: _kTextPrimary),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
+            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+          ),
+        ),
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Proximity Banner
+              _buildAnimatedItem(0, 
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOutCirc,
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: _isAtLocation ? _kSuccessLight : _kWarningLight,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.3),
+                      width: 1.5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.1),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, size: 20),
-                    onPressed: _checkInitialLocation,
-                    tooltip: 'Refresh Location',
-                  ),
-                ],
-              ),
-            ),
-
-            // Customer summary card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.customer.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                  child: Row(
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (child, animation) => ScaleTransition(
+                          scale: CurvedAnimation(parent: animation, curve: Curves.elasticOut), 
+                          child: child
                         ),
-                        OutlinedButton.icon(
-                          onPressed: _launchMaps,
-                          icon: const Icon(Icons.navigation, size: 16),
-                          label: const Text('Navigate'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        child: Container(
+                          key: ValueKey(_isAtLocation),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.15),
+                            shape: BoxShape.circle,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.customer.fullAddress,
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    const SizedBox(height: 12),
-                    ...widget.customer.items.map(
-                          (item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.inventory_2_outlined,
-                                size: 16, color: Color(0xFF2E7D32)),
-                            const SizedBox(width: 8),
-                            Text(item.displayText),
-                          ],
+                          child: Icon(
+                            _isAtLocation ? Icons.check_circle_rounded : Icons.location_on_rounded,
+                            color: _isAtLocation ? _kSuccess : _kWarning,
+                            size: 24,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // OTP Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Enter OTP',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              setState(() => _showOtpHint = !_showOtpHint),
-                          child: Text(_showOtpHint ? 'Hide Hint' : 'Show Hint'),
-                        ),
-                      ],
-                    ),
-                    if (_showOtpHint)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                      const SizedBox(width: 16),
+                      Expanded(
                         child: Text(
-                          'OTP for testing: ${widget.customer.otp}',
-                          style: TextStyle(color: Colors.grey.shade600),
+                          _locationMessage,
+                          style: TextStyle(
+                            color: _isAtLocation ? Colors.green.shade900 : Colors.orange.shade900,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            height: 1.3,
+                          ),
                         ),
                       ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(4, (i) {
-                        return SizedBox(
-                          width: 56,
-                          child: TextField(
-                            controller: _otpControllers[i],
-                            focusNode: _otpFocusNodes[i],
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            maxLength: 1,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: InputDecoration(
-                              counterText: '',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.white.withOpacity(0.6),
+                        shape: const CircleBorder(),
+                        clipBehavior: Clip.antiAlias,
+                        child: IconButton(
+                          icon: const Icon(Icons.refresh_rounded, size: 22),
+                          onPressed: _checkInitialLocation,
+                          color: _isAtLocation ? _kSuccess : _kWarning,
+                          tooltip: 'Refresh Location',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Customer Summary Card
+              _buildAnimatedItem(1,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [_kPrimary, _kPrimaryDark],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: colorScheme.primary,
-                                  width: 2,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _kPrimary.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                widget.customer.name.substring(0, 1).toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
                                 ),
                               ),
                             ),
-                            onChanged: (val) {
-                              if (val.isNotEmpty && i < 3) {
-                                _otpFocusNodes[i + 1].requestFocus();
-                              } else if (val.isEmpty && i > 0) {
-                                _otpFocusNodes[i - 1].requestFocus();
-                              }
-                            },
                           ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Photo Upload
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Proof of Delivery Photo',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_photoFiles.isNotEmpty)
-                      SizedBox(
-                        height: 100,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _photoFiles.length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            return Stack(
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    _photoFiles[index],
-                                    height: 100,
-                                    width: 100,
-                                    fit: BoxFit.cover,
+                                Text(
+                                  widget.customer.name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: _kTextPrimary,
+                                    letterSpacing: -0.5,
                                   ),
                                 ),
-                                Positioned(
-                                  top: 4,
-                                  right: 4,
-                                  child: InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _photoFiles.removeAt(index);
-                                      });
-                                    },
-                                    child: Container(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.black54,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  widget.customer.fullAddress,
+                                  style: const TextStyle(
+                                    color: _kTextSecondary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    if (_photoFiles.length < 5)
-                      OutlinedButton.icon(
-                        onPressed: _pickPhoto,
-                        icon: const Icon(Icons.add_a_photo_outlined),
-                        label: Text('Add Photo (${_photoFiles.length}/5)'),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Video Upload
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Proof of Delivery Video (Optional)',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_videoPath != null)
-                      Row(
-                        children: [
-                          const Icon(Icons.video_file,
-                              color: Color(0xFF2E7D32)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _videoPath!.split('/').last,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: _pickVideo,
-                      icon: const Icon(Icons.video_call_outlined),
-                      label: Text(_videoPath == null
-                          ? 'Add Video'
-                          : 'Change Video'),
-                    ),
-                  ],
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Divider(color: Color(0xFFF1F5F9)),
+                      ),
+                      const Text(
+                        'ORDER ITEMS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: _kTextSecondary,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...widget.customer.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _kPrimary.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.shopping_bag_rounded,
+                                    size: 16, color: _kPrimary),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  item.displayText,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: _kTextPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
 
-
-
-            // Submit Button
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : _submitDelivery,
-              child: _isSubmitting
-                  ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+              // OTP Section
+              _buildAnimatedItem(2,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Verification OTP',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _kTextPrimary,
+                            ),
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () => setState(() => _showOtpHint = !_showOtpHint),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Text(
+                                _showOtpHint ? 'Hide Hint' : 'Show Hint',
+                                style: const TextStyle(
+                                  color: _kPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        child: _showOtpHint
+                            ? Container(
+                                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: _kPrimary.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: _kPrimary.withOpacity(0.2)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.info_outline_rounded, size: 18, color: _kPrimary),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Test OTP: ${widget.customer.otp}',
+                                      style: const TextStyle(
+                                        color: _kPrimaryDark, 
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(4, (i) {
+                          return SizedBox(
+                            width: 64,
+                            height: 72,
+                            child: TextField(
+                              controller: _otpControllers[i],
+                              focusNode: _otpFocusNodes[i],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              maxLength: 1,
+                              style: const TextStyle(
+                                fontSize: 28, 
+                                fontWeight: FontWeight.w800,
+                                color: _kPrimaryDark,
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              decoration: InputDecoration(
+                                counterText: '',
+                                filled: true,
+                                fillColor: _kBackground,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  borderSide: const BorderSide(
+                                    color: _kPrimary,
+                                    width: 2.5,
+                                  ),
+                                ),
+                              ),
+                              onChanged: (val) {
+                                if (val.isNotEmpty && i < 3) {
+                                  _otpFocusNodes[i + 1].requestFocus();
+                                } else if (val.isEmpty && i > 0) {
+                                  _otpFocusNodes[i - 1].requestFocus();
+                                }
+                              },
+                            ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
                 ),
-              )
-                  : const Text('Complete Delivery'),
-            ),
-            const SizedBox(height: 24),
-          ],
+              ),
+
+              // Photo Upload
+              _buildAnimatedItem(3,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Delivery Proof Photos',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _kTextPrimary,
+                            ),
+                          ),
+                          Text(
+                            '${_photoFiles.length}/5',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: _kPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_photoFiles.isNotEmpty)
+                        SizedBox(
+                          height: 120,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _photoFiles.length < 5 ? _photoFiles.length + 1 : 5,
+                            itemBuilder: (context, index) {
+                              if (index == _photoFiles.length) {
+                                return GestureDetector(
+                                  onTap: _pickPhoto,
+                                  child: Container(
+                                    width: 100,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      color: _kBackground,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.add_a_photo_rounded, color: _kPrimary, size: 32),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Stack(
+                                children: [
+                                  Container(
+                                    width: 100,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      image: DecorationImage(
+                                        image: FileImage(_photoFiles[index]),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: 16,
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _photoFiles.removeAt(index)),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        )
+                      else
+                        InkWell(
+                          onTap: _pickPhoto,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            height: 160,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: _kBackground,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ]
+                                  ),
+                                  child: const Icon(Icons.camera_alt_rounded, size: 32, color: _kPrimary),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Tap to select photos',
+                                  style: TextStyle(
+                                    color: _kTextSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Video Upload
+              _buildAnimatedItem(4,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Delivery Video',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _kTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _kBackground,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text('OPTIONAL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: _kTextSecondary, letterSpacing: 0.5)),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      InkWell(
+                        onTap: _pickVideo,
+                        borderRadius: BorderRadius.circular(20),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                          decoration: BoxDecoration(
+                            color: _videoPath != null ? _kPrimary.withOpacity(0.05) : _kBackground,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: _videoPath != null ? _kPrimary.withOpacity(0.3) : Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: _videoPath != null ? _kPrimary : Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: _videoPath == null ? [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ] : [
+                                    BoxShadow(
+                                      color: _kPrimary.withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                                child: Icon(
+                                  _videoPath != null ? Icons.play_arrow_rounded : Icons.videocam_rounded,
+                                  color: _videoPath != null ? Colors.white : _kTextSecondary,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _videoPath != null ? 'Video Attached' : 'Record Video',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 15,
+                                        color: _videoPath != null ? _kPrimaryDark : _kTextPrimary,
+                                      ),
+                                    ),
+                                    if (_videoPath != null) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _videoPath!.split('/').last,
+                                        style: const TextStyle(fontSize: 12, color: _kTextSecondary, fontWeight: FontWeight.w500),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    ]
+                                  ],
+                                ),
+                              ),
+                              if (_videoPath != null)
+                                const Icon(Icons.check_circle_rounded, color: _kPrimary, size: 28),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Submit Button
+              _buildAnimatedItem(5,
+                Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kPrimary.withOpacity(0.3),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      backgroundColor: _kPrimary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    onPressed: _isSubmitting ? null : _submitDelivery,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Complete Delivery'),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );

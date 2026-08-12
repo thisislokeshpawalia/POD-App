@@ -5,7 +5,7 @@ class DeliveryLog {
   final double latitude;
   final double longitude;
   final List<DeliveryItem> items;
-  final List<String> photoPaths;
+  final List<String>? photoPaths;
   final String? videoPath;
   DeliveryLog({
     required this.customer,
@@ -13,7 +13,7 @@ class DeliveryLog {
     required this.latitude,
     required this.longitude,
     required this.items,
-    this.photoPaths = const [],
+    this.photoPaths,
     this.videoPath,
   });
 }

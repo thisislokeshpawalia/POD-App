@@ -14,7 +14,7 @@ class InvoiceService {
   static Future<String> generateInvoicePdf({
     required Customer customer,
     required DateTime deliveryDate,
-    List<String> photoPaths = const [],
+    List<String>? photoPaths,
     bool forceOverwrite = false,
   }) async {
     try {
@@ -27,8 +27,11 @@ class InvoiceService {
 
       final file = File('${invoiceDirectory.path}/invoice_${customer.id}.pdf');
 
-      // Removed caching to ensure new changes (like photos/logos) are always visible.
-      // if (file.existsSync() && !forceOverwrite && photoPaths.isEmpty) { ... }
+      // If the file already exists (likely has the photo) and we aren't forcing an overwrite,
+      // just return the existing file rather than generating a new one without the photo.
+      if (file.existsSync() && !forceOverwrite && (photoPaths == null || photoPaths.isEmpty)) {
+        return file.path;
+      }
 
       final pdf = pw.Document();
 
@@ -41,24 +44,9 @@ class InvoiceService {
         pw.MultiPage(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(32),
-          footer: (pw.Context context) {
-            return pw.Column(children: [
-              pw.Divider(color: PdfColors.grey400),
-              pw.SizedBox(height: 10),
-              pw.Center(
-                child: pw.Text(
-                  'Thank you for your business! Give your pets the best care.',
-                  style: const pw.TextStyle(
-                    fontSize: 10,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-              ),
-            ]);
-          },
           build: (context) {
             return [
-                  // ==================================================
+              // ==================================================
                   // HEADER WITH BRANDING
                   // ==================================================
                   pw.Row(
@@ -295,7 +283,7 @@ class InvoiceService {
                     ),
                   ],
 
-                  if (photoPaths.isNotEmpty) ...[
+                  if (photoPaths != null && photoPaths.isNotEmpty) ...[
                     pw.SizedBox(height: 20),
                     pw.Text(
                       'Proof of Delivery Photos:',
@@ -307,19 +295,36 @@ class InvoiceService {
                     ),
                     pw.SizedBox(height: 8),
                     pw.Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: photoPaths
                           .where((path) => File(path).existsSync())
                           .map((path) => pw.Image(
                                 pw.MemoryImage(File(path).readAsBytesSync()),
-                                height: 120,
+                                height: 200,
                                 fit: pw.BoxFit.contain,
+                                alignment: pw.Alignment.centerLeft,
                               ))
                           .toList(),
                     ),
                   ],
 
+                  pw.Spacer(),
+
+                  // ==================================================
+                  // FOOTER
+                  // ==================================================
+                  pw.Divider(color: PdfColors.grey400),
+                  pw.SizedBox(height: 10),
+                  pw.Center(
+                    child: pw.Text(
+                      'Thank you for your business! Give your pets the best care.',
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ),
             ];
           },
         ),

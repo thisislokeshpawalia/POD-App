@@ -1,12 +1,18 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 import os
 import shutil
+import uuid
+import json
+from deepface import DeepFace
 from app.services.cloudinary_service import upload_video, upload_image
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
 from app.schemas import FarmerCreate, FarmerResponse, FarmerUpdate, DeliveryItemResponse
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/farmers", tags=["Farmers"])
 
@@ -41,12 +47,34 @@ def list_farmers(
 
 @router.post("", response_model=FarmerResponse, status_code=status.HTTP_201_CREATED)
 def create_farmer(
-    payload: FarmerCreate,
+    data: str = Form(None),
+    photo: UploadFile = File(None),
+    payload: Optional[FarmerCreate] = None,
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
     import datetime
-    farmer_data = payload.model_dump()
+    
+    if data:
+        try:
+            payload_dict = json.loads(data)
+            farmer_data = payload_dict
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid JSON data: {e}")
+    elif payload:
+        farmer_data = payload.model_dump()
+    else:
+        raise HTTPException(status_code=400, detail="Data must be provided")
+
+    # Save farmer photo
+    if photo and photo.filename:
+        ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+        photo_filename = f"farmer_{uuid.uuid4()}.{ext}"
+        photo_path = os.path.join(UPLOAD_DIR, photo_filename)
+        with open(photo_path, "wb") as buffer:
+            shutil.copyfileobj(photo.file, buffer)
+        farmer_data["farmer_photo_url"] = photo_path
+
     farmer_data["farmer_id"] = _generate_farmer_id(db)
     farmer_data["id"] = farmer_data["farmer_id"]
     farmer_data["delivery_partner_id"] = partner["id"]
@@ -98,6 +126,7 @@ def mark_delivered(
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
+    # This was likely overridden by upload_proof_of_delivery anyway. Keep for legacy compatibility if any.
     farmer = db.farmers.find_one({"farmer_id": farmer_id, "delivery_partner_id": partner["id"]})
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
@@ -121,15 +150,54 @@ async def upload_proof_of_delivery(
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
-    temp_video_path = f"temp_{farmer_id}.mp4"
-    invoice_pdf_path = f"invoice_{farmer_id}.pdf"
+    # If photo proofs provided, verify the FIRST photo using DeepFace against the registered farmer photo
+    if photos and len(photos) > 0 and photos[0].filename:
+        # Save first photo locally to verify
+        first_photo = photos[0]
+        ext = first_photo.filename.split(".")[-1] if "." in first_photo.filename else "jpg"
+        delivery_photo_filename = f"delivery_{uuid.uuid4()}.{ext}"
+        delivery_photo_path = os.path.join(UPLOAD_DIR, delivery_photo_filename)
+        
+        with open(delivery_photo_path, "wb") as buffer:
+            shutil.copyfileobj(first_photo.file, buffer)
+        
+        # Rewind the file pointer so cloudinary can read it again later
+        first_photo.file.seek(0)
 
+        # DeepFace verify
+        farmer_photo_url = farmer.get("farmer_photo_url")
+        if farmer_photo_url and os.path.exists(farmer_photo_url):
+            try:
+                result = DeepFace.verify(
+                    img1_path=farmer_photo_url, 
+                    img2_path=delivery_photo_path, 
+                    enforce_detection=False
+                )
+                if not result.get("verified"):
+                    os.remove(delivery_photo_path)
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="Face mismatch! The person in the delivery photo does not match the registered farmer."
+                    )
+            except HTTPException:
+                raise
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Face verification error: {str(e)}")
+        
+        # Clean up local delivery proof
+        if os.path.exists(delivery_photo_path):
+            os.remove(delivery_photo_path)
+    elif farmer.get("farmer_photo_url"):
+        raise HTTPException(status_code=400, detail="Delivery photo is required for face verification")
+
+    temp_video_path = f"temp_{farmer_id}.mp4"
     try:
         video_url = None
         if video and video.filename:
             with open(temp_video_path, "wb") as buffer:
                 shutil.copyfileobj(video.file, buffer)
             video_url = upload_video(temp_video_path, f"Proof_{farmer_id}")
+            if os.path.exists(temp_video_path): os.remove(temp_video_path)
 
         photo_urls = []
         if photos:
@@ -152,12 +220,8 @@ async def upload_proof_of_delivery(
         farmer.update(update_data)
 
     except Exception as e:
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        # Cleanup temp files
-        for p in [temp_video_path]:
-            if os.path.exists(p):
-                os.remove(p)
 
     farmer["id"] = farmer["farmer_id"]
     farmer["items"] = farmer.get("items", [])

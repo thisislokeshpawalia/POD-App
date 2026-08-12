@@ -80,22 +80,25 @@ class DeliveryLogScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _InfoCard(
-              title: 'Proof of Delivery Photo',
+              title: 'Proof of Delivery Photos',
               children: [
-                if (deliveryLog.photoPaths.isNotEmpty)
+                if (deliveryLog.photoPaths != null && deliveryLog.photoPaths!.isNotEmpty)
                   SizedBox(
                     height: 180,
-                    child: ListView.separated(
+                    child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: deliveryLog.photoPaths.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 8),
+                      itemCount: deliveryLog.photoPaths!.length,
                       itemBuilder: (context, index) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(deliveryLog.photoPaths[index]),
-                            width: 140,
-                            fit: BoxFit.cover,
+                        return Container(
+                          width: 140,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            image: DecorationImage(
+                              image: FileImage(File(deliveryLog.photoPaths![index])),
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         );
                       },
