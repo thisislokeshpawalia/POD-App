@@ -48,6 +48,7 @@ class Customer {
   final String otp;
   final String? videoUrl;
   final String? invoiceUrl;
+  final List<String> photoUrls;
 
   Customer({
     required this.id,
@@ -64,6 +65,7 @@ class Customer {
     this.otp = '1234',
     this.videoUrl,
     this.invoiceUrl,
+    this.photoUrls = const [],
   });
 
   String get initials {
@@ -92,6 +94,11 @@ class Customer {
         .map((item) => DeliveryItem.fromJson(item as Map<String, dynamic>))
         .toList();
 
+    List<String> rawPhotoUrls = [];
+    if (json['photo_urls'] != null) {
+      rawPhotoUrls = List<String>.from(json['photo_urls']);
+    }
+
     return Customer(
       id: json['id']?.toString() ?? json['farmer_id']?.toString() ?? '',
       name: json['name'] ?? '',
@@ -111,6 +118,7 @@ class Customer {
       items: itemsList,
       videoUrl: json['video_url'],
       invoiceUrl: json['invoice_url'],
+      photoUrls: rawPhotoUrls,
     );
   }
 

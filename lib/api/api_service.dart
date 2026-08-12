@@ -97,7 +97,11 @@ class ApiService {
     }
   }
 
-  Future<dynamic> postMultipart(String endpoint, {required String filePath, required String fileField}) async {
+  Future<dynamic> postMultipart(
+    String endpoint, {
+    String? videoPath,
+    List<String>? photoPaths,
+  }) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     try {
       var request = http.MultipartRequest('POST', uri);
@@ -105,11 +109,21 @@ class ApiService {
         request.headers['Authorization'] = 'Bearer $_authToken';
       }
       
-      request.files.add(
-        await http.MultipartFile.fromPath(fileField, filePath)
-      );
+      if (videoPath != null && videoPath.isNotEmpty) {
+        request.files.add(
+          await http.MultipartFile.fromPath('video', videoPath)
+        );
+      }
 
-      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 60));
+      if (photoPaths != null && photoPaths.isNotEmpty) {
+        for (final path in photoPaths) {
+          request.files.add(
+            await http.MultipartFile.fromPath('photos', path)
+          );
+        }
+      }
+
+      final streamedResponse = await _client.send(request).timeout(const Duration(seconds: 120));
       final response = await http.Response.fromStream(streamedResponse);
       return _processResponse(response);
     } catch (e) {
