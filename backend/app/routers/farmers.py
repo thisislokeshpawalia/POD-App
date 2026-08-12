@@ -182,7 +182,7 @@ async def upload_proof_of_delivery(
             "status": DeliveryStatus.delivered,
         }
         if video_url: update_data["video_url"] = video_url
-        if photo_urls: update_data["photo_urls"] = photo_urls
+        if photo_urls: update_data["proof_photo_urls"] = photo_urls
 
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)

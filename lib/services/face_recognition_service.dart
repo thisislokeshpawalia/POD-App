@@ -40,10 +40,14 @@ class FaceRecognitionService {
 
   Future<List<double>?> getEmbedding(String imagePath) async {
     if (!_isInitialized) await initialize();
-    if (_interpreter == null) return null;
+    if (_interpreter == null) {
+      throw Exception('TFLite Interpreter is null. Model failed to load.');
+    }
 
     final file = File(imagePath);
-    if (!await file.exists()) return null;
+    if (!await file.exists()) {
+      throw Exception('Image file does not exist at path: $imagePath');
+    }
 
     final inputImage = InputImage.fromFile(file);
     final faces = await _faceDetector.processImage(inputImage);
@@ -128,11 +132,10 @@ class FaceRecognitionService {
   /// Verifies if two images contain the same person.
   Future<bool> verifyFaces(String imagePath1, String imagePath2) async {
     final emb1 = await getEmbedding(imagePath1);
+    if (emb1 == null) throw Exception('Failed to extract embedding from image 1 ($imagePath1)');
+    
     final emb2 = await getEmbedding(imagePath2);
-
-    if (emb1 == null || emb2 == null) {
-      throw Exception('Could not extract face embeddings');
-    }
+    if (emb2 == null) throw Exception('Failed to extract embedding from image 2 ($imagePath2)');
 
     final distance = _euclideanDistance(emb1, emb2);
     debugPrint('Face Euclidean Distance: $distance');

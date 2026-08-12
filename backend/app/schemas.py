@@ -139,5 +139,6 @@ class FarmerResponse(BaseModel):
     video_url: Optional[str] = None
     invoice_url: Optional[str] = None
     photo_urls: Optional[list[str]] = None
+    proof_photo_urls: Optional[list[str]] = None
 
     model_config = {"from_attributes": True}
