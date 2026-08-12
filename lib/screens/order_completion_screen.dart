@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
@@ -155,9 +156,30 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   }
 
   Future<void> _pickVideo() async {
-    final picked = await _picker.pickVideo(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() => _videoPath = picked.path);
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.videocam),
+            title: const Text('Record a Video'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.video_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      final picked = await _picker.pickVideo(source: source);
+      if (picked != null) {
+        setState(() => _videoPath = picked.path);
+      }
     }
   }
 

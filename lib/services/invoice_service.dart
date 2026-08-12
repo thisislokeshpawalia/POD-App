@@ -55,22 +55,37 @@ class InvoiceService {
                       pw.Column(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          pw.Text(
-                            'MyAnimal',
-                            style: pw.TextStyle(
-                              fontSize: 28,
-                              fontWeight: pw.FontWeight.bold,
-                              color: primaryColor,
+                          pw.RichText(
+                            text: pw.TextSpan(
+                              children: [
+                                pw.TextSpan(
+                                  text: 'My',
+                                  style: pw.TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#296ebb'),
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: 'Animal\n',
+                                  style: pw.TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#52a632'),
+                                  ),
+                                ),
+                                pw.TextSpan(
+                                  text: 'Leading the Animal Tech Revolution',
+                                  style: pw.TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#52a632'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           pw.SizedBox(height: 4),
-                          pw.Text(
-                            'Your Trusted Pet Care Partner',
-                            style: const pw.TextStyle(
-                              fontSize: 10,
-                              color: PdfColors.grey700,
-                            ),
-                          ),
                           pw.Text(
                             'Sector 132, Noida (default)',
                             style: const pw.TextStyle(
@@ -239,23 +254,31 @@ class InvoiceService {
                         color: primaryColor,
                       ),
                     ),
-                    pw.SizedBox(height: 4),
+                    pw.SizedBox(height: 8),
                     pw.UrlLink(
                       destination: customer.videoUrl!,
-                      child: pw.Text(
-                        'Tap here to view the Delivery Proof Video',
-                        style: const pw.TextStyle(
-                          color: PdfColors.blue,
-                          decoration: pw.TextDecoration.underline,
+                      child: pw.Container(
+                        width: 160,
+                        height: 90,
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColors.black,
+                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(8)),
+                        ),
+                        child: pw.Center(
+                          child: pw.SvgImage(
+                            svg: '<svg viewBox="0 0 24 24"><path fill="white" d="M8 5v14l11-7z"/></svg>',
+                            width: 32,
+                            height: 32,
+                          ),
                         ),
                       ),
                     ),
-                    pw.SizedBox(height: 2),
+                    pw.SizedBox(height: 4),
                     pw.Text(
-                      'URL: ${customer.videoUrl}',
+                      'Tap thumbnail to play video',
                       style: const pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.grey600,
+                        fontSize: 9,
+                        color: PdfColors.grey700,
                       ),
                     ),
                   ],
