@@ -292,9 +292,14 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
                               image: FileImage(_photoFile!),
                               fit: BoxFit.cover,
                             )
-                          : null,
+                          : (widget.farmer?.photoUrls != null && widget.farmer!.photoUrls!.isNotEmpty)
+                              ? DecorationImage(
+                                  image: NetworkImage(widget.farmer!.photoUrls!.first),
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
                     ),
-                    child: _photoFile == null
+                    child: _photoFile == null && (widget.farmer?.photoUrls == null || widget.farmer!.photoUrls!.isEmpty)
                         ? const Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

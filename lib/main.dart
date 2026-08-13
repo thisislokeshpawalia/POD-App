@@ -10,6 +10,7 @@ import 'repositories/farmer_repository.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/profile_completion_screen.dart';
 import 'screens/customer_list_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/farmer_service.dart';
 
@@ -82,7 +83,7 @@ class SubsidyDeliveryApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AuthGate(),
+      home: const SplashScreen(),
     );
   }
 }
@@ -112,32 +113,25 @@ class _PermissionGateState extends State<PermissionGate> {
     if (allGranted) {
       setState(() { _permissionsGranted = true; });
     } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showPermissionDialog();
-      });
-    }
-  }
-
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text('App Permissions'),
-        content: const Text(
-            'To run properly, this app needs access to your Location, Camera, and Internet (Internet is enabled by default).'),
-        actions: [
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await [Permission.location, Permission.camera].request();
-              setState(() { _permissionsGranted = true; });
-            },
-            child: const Text('Grant Permissions'),
+      // Directly request permissions instead of showing a custom dialog first.
+      // This is the standard pattern and avoids popping up an unnecessary alert dialog.
+      final statuses = await [Permission.location, Permission.camera].request();
+      final nowAllGranted = statuses[Permission.location]!.isGranted && 
+                            statuses[Permission.camera]!.isGranted;
+      
+      setState(() { _permissionsGranted = nowAllGranted; });
+      
+      // If still not granted, we might want to guide the user to settings, 
+      // but for now, we just remain on the loading indicator or show a message.
+      if (!nowAllGranted && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Permissions are required to use this app. Please grant them in settings.'),
+            duration: Duration(seconds: 4),
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   @override

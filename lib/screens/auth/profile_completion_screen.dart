@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 
@@ -20,7 +22,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   late TextEditingController _pincodeController;
   late TextEditingController _vehicleTypeController;
   late TextEditingController _vehicleNumberController;
+  late TextEditingController _vehicleNumberController;
   late TextEditingController _aadhaarController;
+  File? _profileImage;
+  String? _existingProfileImageUrl;
 
   @override
   void initState() {
@@ -35,6 +40,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     _vehicleTypeController = TextEditingController(text: partner?.vehicleType ?? 'Two Wheeler');
     _vehicleNumberController = TextEditingController(text: partner?.vehicleNumber ?? '');
     _aadhaarController = TextEditingController(text: partner?.aadhaar ?? '');
+    _existingProfileImageUrl = partner?.profileImage;
   }
 
   @override
@@ -51,20 +57,67 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  void _showImagePickerBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Camera'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submitProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Check if image is present for new users or existing users without an image
+    if (_profileImage == null && (_existingProfileImageUrl == null || _existingProfileImageUrl!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload a profile photo')),
+      );
+      return;
+    }
 
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.completeProfile(
       fullName: _nameController.text.trim(),
-      email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+      email: _emailController.text.trim(),
       address: _addressController.text.trim(),
       city: _cityController.text.trim(),
       state: _stateController.text.trim(),
       pincode: _pincodeController.text.trim(),
       vehicleType: _vehicleTypeController.text.trim(),
       vehicleNumber: _vehicleNumberController.text.trim(),
-      aadhaar: _aadhaarController.text.trim().isNotEmpty ? _aadhaarController.text.trim() : null,
+      aadhaar: _aadhaarController.text.trim(),
+      profileImagePath: _profileImage?.path,
     );
 
     if (!success && authProvider.errorMessage != null && mounted) {
@@ -109,6 +162,42 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               ),
               const SizedBox(height: 24),
 
+              // Profile Photo
+              Center(
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: _profileImage != null
+                          ? FileImage(_profileImage!) as ImageProvider
+                          : (_existingProfileImageUrl != null && _existingProfileImageUrl!.isNotEmpty)
+                              ? NetworkImage(_existingProfileImageUrl!)
+                              : null,
+                      child: (_profileImage == null && (_existingProfileImageUrl == null || _existingProfileImageUrl!.isEmpty))
+                          ? Icon(Icons.person, size: 50, color: Colors.grey.shade400)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: InkWell(
+                        onTap: _showImagePickerBottomSheet,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF2E7D32),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Full Name
               TextFormField(
                 controller: _nameController,
@@ -126,10 +215,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
-                  labelText: 'Email Address (Optional)',
+                  labelText: 'Email Address *',
                   prefixIcon: Icon(Icons.email_outlined),
                   border: OutlineInputBorder(),
                 ),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Email is required' : null,
               ),
               const SizedBox(height: 16),
 
@@ -234,11 +324,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 maxLength: 12,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
-                  labelText: 'Aadhaar Number (Optional)',
+                  labelText: 'Aadhaar Number *',
                   prefixIcon: Icon(Icons.badge_outlined),
                   border: OutlineInputBorder(),
                   counterText: '',
                 ),
+                validator: (v) => (v == null || v.trim().length != 12) ? 'Enter valid 12-digit Aadhaar' : null,
               ),
               const SizedBox(height: 28),
 

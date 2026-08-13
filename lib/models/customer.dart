@@ -49,7 +49,9 @@ class Customer {
   final String? videoUrl;
   final String? invoiceUrl;
   final String? farmerPhotoUrl;
+  final String? farmerFacePhotoUrl;
   final List<String>? photoUrls;
+  final List<String>? proofPhotoUrls;
 
   Customer({
     required this.id,
@@ -67,7 +69,9 @@ class Customer {
     this.videoUrl,
     this.invoiceUrl,
     this.farmerPhotoUrl,
+    this.farmerFacePhotoUrl,
     this.photoUrls,
+    this.proofPhotoUrls,
   });
 
   String get initials {
@@ -121,7 +125,9 @@ class Customer {
       videoUrl: json['video_url'],
       invoiceUrl: json['invoice_url'],
       farmerPhotoUrl: json['farmer_photo_url'],
+      farmerFacePhotoUrl: json['farmer_face_photo_url'],
       photoUrls: json['photo_urls'] != null ? List<String>.from(json['photo_urls']) : null,
+      proofPhotoUrls: json['proof_photo_urls'] != null ? List<String>.from(json['proof_photo_urls']) : null,
     );
   }
 

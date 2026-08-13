@@ -4,7 +4,6 @@ import os
 import shutil
 import uuid
 import json
-from deepface import DeepFace
 from app.services.cloudinary_service import upload_video, upload_image
 from app.auth import get_current_partner
 from app.database import get_db
@@ -73,6 +72,7 @@ def create_farmer(
             cloud_url = upload_image(photo_path, public_id=photo_filename)
             farmer_data["photo_urls"] = [cloud_url]
         except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
             # Fallback if cloudinary fails (though we should ideally raise an error)
             pass
         finally:
@@ -147,6 +147,7 @@ async def upload_proof_of_delivery(
     farmer_id: str,
     video: Optional[UploadFile] = File(None),
     photos: Optional[List[UploadFile]] = File(None),
+    face_photo: Optional[UploadFile] = File(None),
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
@@ -154,45 +155,9 @@ async def upload_proof_of_delivery(
     if not farmer:
         raise HTTPException(status_code=404, detail="Farmer not found")
 
-    # If photo proofs provided, verify the FIRST photo using DeepFace against the registered farmer photo
-    if photos and len(photos) > 0 and photos[0].filename:
-        # Save first photo locally to verify
-        first_photo = photos[0]
-        ext = first_photo.filename.split(".")[-1] if "." in first_photo.filename else "jpg"
-        delivery_photo_filename = f"delivery_{uuid.uuid4()}.{ext}"
-        delivery_photo_path = os.path.join(UPLOAD_DIR, delivery_photo_filename)
-        
-        with open(delivery_photo_path, "wb") as buffer:
-            shutil.copyfileobj(first_photo.file, buffer)
-        
-        # Rewind the file pointer so cloudinary can read it again later
-        first_photo.file.seek(0)
+    # Face verification is now done locally on the Flutter client before this endpoint is called.
+    pass
 
-        # DeepFace verify
-        farmer_photo_url = farmer.get("farmer_photo_url")
-        if farmer_photo_url and os.path.exists(farmer_photo_url):
-            try:
-                result = DeepFace.verify(
-                    img1_path=farmer_photo_url, 
-                    img2_path=delivery_photo_path, 
-                    enforce_detection=False
-                )
-                if not result.get("verified"):
-                    os.remove(delivery_photo_path)
-                    raise HTTPException(
-                        status_code=400, 
-                        detail="Face mismatch! The person in the delivery photo does not match the registered farmer."
-                    )
-            except HTTPException:
-                raise
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Face verification error: {str(e)}")
-        
-        # Clean up local delivery proof
-        if os.path.exists(delivery_photo_path):
-            os.remove(delivery_photo_path)
-    elif farmer.get("farmer_photo_url"):
-        raise HTTPException(status_code=400, detail="Delivery photo is required for face verification")
 
     temp_video_path = f"temp_{farmer_id}.mp4"
     try:
@@ -214,11 +179,20 @@ async def upload_proof_of_delivery(
                 photo_urls.append(url)
                 if os.path.exists(tmp_p): os.remove(tmp_p)
 
+        face_photo_url = None
+        if face_photo and face_photo.filename:
+            tmp_p = f"temp_{farmer_id}_face_photo.jpg"
+            with open(tmp_p, "wb") as buffer:
+                shutil.copyfileobj(face_photo.file, buffer)
+            face_photo_url = upload_image(tmp_p, f"Proof_Face_{farmer_id}")
+            if os.path.exists(tmp_p): os.remove(tmp_p)
+
         update_data = {
             "status": DeliveryStatus.delivered,
         }
         if video_url: update_data["video_url"] = video_url
-        if photo_urls: update_data["photo_urls"] = photo_urls
+        if photo_urls: update_data["proof_photo_urls"] = photo_urls
+        if face_photo_url: update_data["farmer_face_photo_url"] = face_photo_url
 
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)

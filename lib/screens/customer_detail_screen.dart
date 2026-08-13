@@ -29,12 +29,32 @@ class CustomerDetailScreen extends StatelessWidget {
   }
 
   Future<void> _launchMaps(BuildContext context) async {
-    final uri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=${customer.latitude},${customer.longitude}',
-    );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    final lat = customer.latitude;
+    final lng = customer.longitude;
+    final Uri googleMapsUri = Uri.parse('google.navigation:q=$lat,$lng');
+    final Uri appleMapsUri = Uri.parse('https://maps.apple.com/?daddr=$lat,$lng');
+    final Uri webMapsUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+
+    try {
+      if (Theme.of(context).platform == TargetPlatform.iOS) {
+        if (await canLaunchUrl(appleMapsUri)) {
+          await launchUrl(appleMapsUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } else {
+        if (await canLaunchUrl(googleMapsUri)) {
+          await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      }
+      
+      // Fallback
+      if (await canLaunchUrl(webMapsUri)) {
+        await launchUrl(webMapsUri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Could not launch any maps application');
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not launch maps')),
@@ -61,18 +81,37 @@ class CustomerDetailScreen extends StatelessWidget {
             Center(
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: colorScheme.primary,
-                    child: Text(
-                      customer.initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  (customer.photoUrls != null && customer.photoUrls!.isNotEmpty)
+                      ? Container(
+                          width: 160,
+                          height: 160,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                            image: DecorationImage(
+                              image: NetworkImage(customer.photoUrls!.first),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )
+                      : CircleAvatar(
+                          radius: 50,
+                          backgroundColor: colorScheme.primary,
+                          child: Text(
+                            customer.initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -221,6 +260,7 @@ class CustomerDetailScreen extends StatelessWidget {
                     final path = await InvoiceService.generateInvoicePdf(
                       customer: customer,
                       deliveryDate: DateTime.now(), // Fallback for past deliveries
+                      photoPaths: customer.photoUrls ?? customer.proofPhotoUrls,
                     );
                     await OpenFilex.open(path);
                   } catch (e) {

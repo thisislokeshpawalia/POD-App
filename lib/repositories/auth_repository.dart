@@ -74,8 +74,14 @@ class AuthRepository {
     }
   }
 
-  Future<DeliveryPartnerModel> updateProfile(Map<String, dynamic> profileData) async {
-    return await _authService.updateProfile(profileData);
+  Future<DeliveryPartnerModel> updateProfile(
+    Map<String, String> profileData, {
+    String? profileImagePath,
+  }) async {
+    return await _authService.updateProfile(
+      profileData,
+      profileImagePath: profileImagePath,
+    );
   }
 
   Future<void> logout() async {
