@@ -98,10 +98,7 @@ class Customer {
         .map((item) => DeliveryItem.fromJson(item as Map<String, dynamic>))
         .toList();
 
-    List<String> rawPhotoUrls = [];
-    if (json['photo_urls'] != null) {
-      rawPhotoUrls = List<String>.from(json['photo_urls']);
-    }
+
 
     return Customer(
       id: json['id']?.toString() ?? json['farmer_id']?.toString() ?? '',

@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
@@ -46,7 +46,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
   File? _farmerPhoto;
-  List<File> _itemPhotos = [];
+  final List<File> _itemPhotos = [];
   String? _videoPath;
   bool _showOtpHint = false;
   bool _isSubmitting = false;
