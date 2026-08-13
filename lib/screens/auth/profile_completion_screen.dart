@@ -22,7 +22,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   late TextEditingController _pincodeController;
   late TextEditingController _vehicleTypeController;
   late TextEditingController _vehicleNumberController;
-  late TextEditingController _vehicleNumberController;
   late TextEditingController _aadhaarController;
   File? _profileImage;
   String? _existingProfileImageUrl;

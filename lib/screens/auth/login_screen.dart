@@ -141,6 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (authProvider.isRegistrationFlow) {
       await authProvider.completeProfile(
         fullName: _nameController.text.trim(),
+        email: '',
         aadhaar: _aadhaarController.text.trim(),
         address: 'Sector 132',
         city: 'Noida',
