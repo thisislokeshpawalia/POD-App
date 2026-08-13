@@ -67,6 +67,9 @@ class FaceRecognitionService {
     final imageBytes = await file.readAsBytes();
     img.Image? image = img.decodeImage(imageBytes);
     if (image == null) throw Exception('Could not decode image');
+    
+    // Fix EXIF orientation
+    image = img.bakeOrientation(image);
 
     // Crop face
     final bbox = face.boundingBox;
@@ -153,7 +156,7 @@ class FaceRecognitionService {
     final distance = _euclideanDistance(emb1, emb2);
     debugPrint('Face Euclidean Distance: $distance');
     
-    // Threshold is typically around 1.0 for L2 normalized MobileFaceNet distance
-    return distance < 1.0;
+    // Threshold is typically around 1.15 for L2 normalized MobileFaceNet distance
+    return distance < 1.15;
   }
 }
