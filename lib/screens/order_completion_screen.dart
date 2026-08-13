@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
@@ -45,7 +44,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
-  List<File> _photoFiles = [];
+  final List<File> _photoFiles = [];
   File? _farmerFacePhoto;
   String? _videoPath;
   bool _showOtpHint = false;
@@ -461,12 +460,12 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     color: _isAtLocation ? _kSuccessLight : _kWarningLight,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.3),
+                      color: (_isAtLocation ? _kSuccess : _kWarning).withValues(alpha: 0.3),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.1),
+                        color: (_isAtLocation ? _kSuccess : _kWarning).withValues(alpha: 0.1),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       )
@@ -484,7 +483,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                           key: ValueKey(_isAtLocation),
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: (_isAtLocation ? _kSuccess : _kWarning).withOpacity(0.15),
+                            color: (_isAtLocation ? _kSuccess : _kWarning).withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -508,7 +507,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                       ),
                       const SizedBox(width: 8),
                       Material(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                         shape: const CircleBorder(),
                         clipBehavior: Clip.antiAlias,
                         child: IconButton(
@@ -531,7 +530,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _kTextPrimary.withOpacity(0.04),
+                        color: _kTextPrimary.withValues(alpha: 0.04),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )
@@ -556,7 +555,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _kPrimary.withOpacity(0.3),
+                                  color: _kPrimary.withValues(alpha: 0.3),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 )
@@ -631,7 +630,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: _kPrimary.withOpacity(0.08),
+                                  color: _kPrimary.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(Icons.shopping_bag_rounded,
@@ -665,7 +664,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _kTextPrimary.withOpacity(0.04),
+                        color: _kTextPrimary.withValues(alpha: 0.04),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )
@@ -712,9 +711,9 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                 margin: const EdgeInsets.only(top: 12, bottom: 4),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: _kPrimary.withOpacity(0.05),
+                                  color: _kPrimary.withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: _kPrimary.withOpacity(0.2)),
+                                  border: Border.all(color: _kPrimary.withValues(alpha: 0.2)),
                                 ),
                                 child: Row(
                                   children: [
@@ -798,7 +797,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _kTextPrimary.withOpacity(0.04),
+                        color: _kTextPrimary.withValues(alpha: 0.04),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )
@@ -898,7 +897,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _kTextPrimary.withOpacity(0.04),
+                        color: _kTextPrimary.withValues(alpha: 0.04),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )
@@ -1013,7 +1012,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
+                                        color: Colors.black.withValues(alpha: 0.05),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       )
@@ -1046,7 +1045,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: _kTextPrimary.withOpacity(0.04),
+                        color: _kTextPrimary.withValues(alpha: 0.04),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )
@@ -1086,10 +1085,10 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                           duration: const Duration(milliseconds: 300),
                           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                           decoration: BoxDecoration(
-                            color: _videoPath != null ? _kPrimary.withOpacity(0.05) : _kBackground,
+                            color: _videoPath != null ? _kPrimary.withValues(alpha: 0.05) : _kBackground,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: _videoPath != null ? _kPrimary.withOpacity(0.3) : Colors.grey.shade300,
+                              color: _videoPath != null ? _kPrimary.withValues(alpha: 0.3) : Colors.grey.shade300,
                               width: 1.5,
                             ),
                           ),
@@ -1102,13 +1101,13 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                   shape: BoxShape.circle,
                                   boxShadow: _videoPath == null ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: Colors.black.withValues(alpha: 0.05),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     )
                                   ] : [
                                     BoxShadow(
-                                      color: _kPrimary.withOpacity(0.4),
+                                      color: _kPrimary.withValues(alpha: 0.4),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     )
@@ -1162,7 +1161,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                   decoration: BoxDecoration(
                     boxShadow: [
                       BoxShadow(
-                        color: _kPrimary.withOpacity(0.3),
+                        color: _kPrimary.withValues(alpha: 0.3),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       )

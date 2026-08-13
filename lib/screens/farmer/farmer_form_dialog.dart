@@ -132,6 +132,7 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to take photo: $e')),
       );
