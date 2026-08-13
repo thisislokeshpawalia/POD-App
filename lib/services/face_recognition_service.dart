@@ -116,7 +116,21 @@ class FaceRecognitionService {
     // Run inference
     _interpreter!.run(input, output);
 
-    return output[0];
+    final emb = output[0];
+    
+    // L2 Normalize the embedding
+    double sum = 0.0;
+    for (var val in emb) {
+      sum += val * val;
+    }
+    final norm = sqrt(sum);
+    if (norm > 0) {
+      for (int i = 0; i < emb.length; i++) {
+        emb[i] /= norm;
+      }
+    }
+
+    return emb;
   }
 
   double _euclideanDistance(List<double> e1, List<double> e2) {
@@ -140,7 +154,7 @@ class FaceRecognitionService {
     final distance = _euclideanDistance(emb1, emb2);
     debugPrint('Face Euclidean Distance: $distance');
     
-    // Threshold is typically around 1.0 to 1.1 for MobileFaceNet L2 distance
-    return distance < 1.15;
+    // Threshold is typically around 1.0 for L2 normalized MobileFaceNet distance
+    return distance < 1.0;
   }
 }

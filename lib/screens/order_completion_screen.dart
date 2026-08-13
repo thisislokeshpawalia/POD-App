@@ -45,7 +45,8 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
-  List<File> _photoFiles = [];
+  File? _farmerPhoto;
+  List<File> _itemPhotos = [];
   String? _videoPath;
   bool _showOtpHint = false;
   bool _isSubmitting = false;
@@ -145,16 +146,57 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
 
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
 
-  Future<void> _pickPhoto() async {
-    final picked = await _picker.pickMultiImage(imageQuality: 80);
-    if (picked.isNotEmpty) {
+  Future<void> _pickFarmerPhoto() async {
+    final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (picked != null) {
       setState(() {
-        for (var file in picked) {
-          if (_photoFiles.length < 5) {
-            _photoFiles.add(File(file.path));
-          }
-        }
+        _farmerPhoto = File(picked.path);
       });
+    }
+  }
+
+  Future<void> _pickItemPhotos() async {
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source == null) return;
+
+    if (source == ImageSource.camera) {
+      final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+      if (picked != null) {
+        setState(() {
+          if (_itemPhotos.length < 5) {
+            _itemPhotos.add(File(picked.path));
+          }
+        });
+      }
+    } else {
+      final picked = await _picker.pickMultiImage(imageQuality: 80);
+      if (picked.isNotEmpty) {
+        setState(() {
+          for (var file in picked) {
+            if (_itemPhotos.length < 5) {
+              _itemPhotos.add(File(file.path));
+            }
+          }
+        });
+      }
     }
   }
 
@@ -278,8 +320,13 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       return;
     }
 
-    if (_photoFiles.isEmpty) {
-      _showErrorDialog('Please upload at least one proof of delivery photo for verification.');
+    if (_farmerPhoto == null) {
+      _showErrorDialog('Please take a photo of the farmer for face verification.');
+      return;
+    }
+
+    if (_itemPhotos.isEmpty) {
+      _showErrorDialog('Please upload at least one photo of the delivered items.');
       return;
     }
 
@@ -300,7 +347,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
     if (widget.customer.photoUrls != null && widget.customer.photoUrls!.isNotEmpty) {
       try {
         final registeredPhotoUrl = widget.customer.photoUrls!.first;
-        final deliveryPhotoPath = _photoFiles.first.path;
+        final deliveryPhotoPath = _farmerPhoto!.path;
 
         // Download the registered photo to a temp file
         final tempDir = await getTemporaryDirectory();
@@ -338,7 +385,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
     success = await provider.uploadProofAndMarkDelivered(
       widget.customer.id, 
       _videoPath, 
-      _photoFiles.map((e) => e.path).toList(),
+      [_farmerPhoto!.path, ..._itemPhotos.map((e) => e.path)],
     );
     
     if (!mounted) return;
@@ -360,7 +407,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       latitude: position?.latitude ?? updatedCustomer.latitude,
       longitude: position?.longitude ?? updatedCustomer.longitude,
       items: updatedCustomer.items,
-      photoPaths: _photoFiles.map((e) => e.path).toList(),
+      photoPaths: [_farmerPhoto!.path, ..._itemPhotos.map((e) => e.path)],
       videoPath: _videoPath,
     );
 
@@ -773,7 +820,123 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                 ),
               ),
 
-              // Photo Upload
+              // Farmer Face Photo Upload
+              _buildAnimatedItem(3,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Farmer Photo (Verification)',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: _kTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_farmerPhoto != null)
+                        Stack(
+                          children: [
+                            Container(
+                              height: 160,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                image: DecorationImage(
+                                  image: FileImage(_farmerPhoto!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _farmerPhoto = null),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        InkWell(
+                          onTap: _pickFarmerPhoto,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            height: 160,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: _kBackground,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      )
+                                    ]
+                                  ),
+                                  child: const Icon(Icons.camera_front_rounded, size: 32, color: _kPrimary),
+                                ),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'Take Farmer Photo',
+                                  style: TextStyle(
+                                    color: _kTextSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Text(
+                                  'For face verification',
+                                  style: TextStyle(
+                                    color: _kTextSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Item Photos Upload
               _buildAnimatedItem(3,
                 Container(
                   decoration: BoxDecoration(
@@ -796,7 +959,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Delivery Proof Photos',
+                            'Item Photos',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -804,7 +967,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                             ),
                           ),
                           Text(
-                            '${_photoFiles.length}/5',
+                            '${_itemPhotos.length}/5',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -814,16 +977,16 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                         ],
                       ),
                       const SizedBox(height: 16),
-                      if (_photoFiles.isNotEmpty)
+                      if (_itemPhotos.isNotEmpty)
                         SizedBox(
                           height: 120,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            itemCount: _photoFiles.length < 5 ? _photoFiles.length + 1 : 5,
+                            itemCount: _itemPhotos.length < 5 ? _itemPhotos.length + 1 : 5,
                             itemBuilder: (context, index) {
-                              if (index == _photoFiles.length) {
+                              if (index == _itemPhotos.length) {
                                 return GestureDetector(
-                                  onTap: _pickPhoto,
+                                  onTap: _pickItemPhotos,
                                   child: Container(
                                     width: 100,
                                     margin: const EdgeInsets.only(right: 12),
@@ -846,7 +1009,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       image: DecorationImage(
-                                        image: FileImage(_photoFiles[index]),
+                                        image: FileImage(_itemPhotos[index]),
                                         fit: BoxFit.cover,
                                       ),
                                     ),
@@ -855,7 +1018,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                     top: 4,
                                     right: 16,
                                     child: GestureDetector(
-                                      onTap: () => setState(() => _photoFiles.removeAt(index)),
+                                      onTap: () => setState(() => _itemPhotos.removeAt(index)),
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: const BoxDecoration(
@@ -873,7 +1036,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                         )
                       else
                         InkWell(
-                          onTap: _pickPhoto,
+                          onTap: _pickItemPhotos,
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
                             height: 160,
@@ -906,7 +1069,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                 ),
                                 const SizedBox(height: 16),
                                 const Text(
-                                  'Tap to select photos',
+                                  'Tap to add item photos',
                                   style: TextStyle(
                                     color: _kTextSecondary,
                                     fontWeight: FontWeight.w600,

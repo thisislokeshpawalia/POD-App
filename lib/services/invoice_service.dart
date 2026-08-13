@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:http/http.dart' as http;
 
 import '../models/customer.dart';
 
@@ -31,6 +32,26 @@ class InvoiceService {
       // just return the existing file rather than generating a new one without the photo.
       if (file.existsSync() && !forceOverwrite && (photoPaths == null || photoPaths.isEmpty)) {
         return file.path;
+      }
+
+      // Pre-fetch images to support both local and remote paths
+      final List<pw.MemoryImage> invoiceImages = [];
+      if (photoPaths != null) {
+        for (final path in photoPaths) {
+          if (path.startsWith('http://') || path.startsWith('https://')) {
+            try {
+              final response = await http.get(Uri.parse(path));
+              if (response.statusCode == 200) {
+                invoiceImages.add(pw.MemoryImage(response.bodyBytes));
+              }
+            } catch (_) {}
+          } else {
+            final localFile = File(path);
+            if (localFile.existsSync()) {
+              invoiceImages.add(pw.MemoryImage(localFile.readAsBytesSync()));
+            }
+          }
+        }
       }
 
       final pdf = pw.Document();
@@ -283,7 +304,7 @@ class InvoiceService {
                     ),
                   ],
 
-                  if (photoPaths != null && photoPaths.isNotEmpty) ...[
+                  if (invoiceImages.isNotEmpty) ...[
                     pw.SizedBox(height: 20),
                     pw.Text(
                       'Proof of Delivery Photos:',
@@ -297,10 +318,9 @@ class InvoiceService {
                     pw.Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: photoPaths
-                          .where((path) => File(path).existsSync())
-                          .map((path) => pw.Image(
-                                pw.MemoryImage(File(path).readAsBytesSync()),
+                      children: invoiceImages
+                          .map((img) => pw.Image(
+                                img,
                                 height: 200,
                                 fit: pw.BoxFit.contain,
                                 alignment: pw.Alignment.centerLeft,
