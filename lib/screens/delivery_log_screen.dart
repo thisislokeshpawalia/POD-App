@@ -192,6 +192,7 @@ class DeliveryLogScreen extends StatelessWidget {
                     customer: deliveryLog.customer,
                     deliveryDate: deliveryLog.timestamp,
                     photoPaths: deliveryLog.photoPaths,
+                    farmerFacePhotoPath: deliveryLog.farmerFacePhotoPath,
                   );
                   await OpenFilex.open(path);
                 } catch (e) {

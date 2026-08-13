@@ -134,14 +134,15 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> completeProfile({
     required String fullName,
-    String? email,
+    required String email,
     required String address,
     required String city,
     required String state,
     required String pincode,
     required String vehicleType,
     required String vehicleNumber,
-    String? aadhaar,
+    required String aadhaar,
+    String? profileImagePath,
   }) async {
     _errorMessage = null;
     notifyListeners();
@@ -157,7 +158,7 @@ class AuthProvider with ChangeNotifier {
         'vehicle_type': vehicleType,
         'vehicle_number': vehicleNumber,
         'aadhaar': aadhaar,
-      });
+      }, profileImagePath: profileImagePath);
 
       _partner = updatedPartner;
       _status = AuthStatus.authenticated;

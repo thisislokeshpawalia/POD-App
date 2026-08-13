@@ -147,6 +147,7 @@ async def upload_proof_of_delivery(
     farmer_id: str,
     video: Optional[UploadFile] = File(None),
     photos: Optional[List[UploadFile]] = File(None),
+    face_photo: Optional[UploadFile] = File(None),
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
@@ -178,11 +179,20 @@ async def upload_proof_of_delivery(
                 photo_urls.append(url)
                 if os.path.exists(tmp_p): os.remove(tmp_p)
 
+        face_photo_url = None
+        if face_photo and face_photo.filename:
+            tmp_p = f"temp_{farmer_id}_face_photo.jpg"
+            with open(tmp_p, "wb") as buffer:
+                shutil.copyfileobj(face_photo.file, buffer)
+            face_photo_url = upload_image(tmp_p, f"Proof_Face_{farmer_id}")
+            if os.path.exists(tmp_p): os.remove(tmp_p)
+
         update_data = {
             "status": DeliveryStatus.delivered,
         }
         if video_url: update_data["video_url"] = video_url
         if photo_urls: update_data["proof_photo_urls"] = photo_urls
+        if face_photo_url: update_data["farmer_face_photo_url"] = face_photo_url
 
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)

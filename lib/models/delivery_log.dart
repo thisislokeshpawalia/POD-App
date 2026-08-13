@@ -7,6 +7,7 @@ class DeliveryLog {
   final List<DeliveryItem> items;
   final List<String>? photoPaths;
   final String? videoPath;
+  final String? farmerFacePhotoPath;
   DeliveryLog({
     required this.customer,
     required this.timestamp,
@@ -15,5 +16,6 @@ class DeliveryLog {
     required this.items,
     this.photoPaths,
     this.videoPath,
+    this.farmerFacePhotoPath,
   });
 }

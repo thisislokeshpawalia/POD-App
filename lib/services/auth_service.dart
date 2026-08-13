@@ -52,11 +52,24 @@ class AuthService {
     return DeliveryPartnerModel.fromJson(response);
   }
 
-  Future<DeliveryPartnerModel> updateProfile(Map<String, dynamic> profileData) async {
-    final response = await _apiService.patch(
-      ApiConstants.profile,
-      body: profileData,
-    );
-    return DeliveryPartnerModel.fromJson(response);
+  Future<DeliveryPartnerModel> updateProfile(
+    Map<String, String> profileData, {
+    String? profileImagePath,
+  }) async {
+    if (profileImagePath != null) {
+      final response = await _apiService.sendMultipart(
+        ApiConstants.profile,
+        method: 'PATCH',
+        fields: profileData,
+        files: {'profile_image': profileImagePath},
+      );
+      return DeliveryPartnerModel.fromJson(response);
+    } else {
+      final response = await _apiService.patch(
+        ApiConstants.profile,
+        body: profileData,
+      );
+      return DeliveryPartnerModel.fromJson(response);
+    }
   }
 }

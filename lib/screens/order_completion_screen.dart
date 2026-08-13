@@ -46,6 +46,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
 
   List<File> _photoFiles = [];
+  File? _farmerFacePhoto;
   String? _videoPath;
   bool _showOtpHint = false;
   bool _isSubmitting = false;
@@ -65,7 +66,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       duration: const Duration(milliseconds: 900),
     );
 
-    _fadeAnimations = List.generate(6, (index) {
+    _fadeAnimations = List.generate(7, (index) {
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _animationController,
@@ -74,7 +75,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       );
     });
 
-    _slideAnimations = List.generate(6, (index) {
+    _slideAnimations = List.generate(7, (index) {
       return Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
         CurvedAnimation(
           parent: _animationController,
@@ -144,6 +145,15 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
 
 
   // ─── Photo / Video Pickers ─────────────────────────────────────────────────
+
+  Future<void> _pickFarmerFacePhoto() async {
+    final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (picked != null) {
+      setState(() {
+        _farmerFacePhoto = File(picked.path);
+      });
+    }
+  }
 
   Future<void> _pickPhoto() async {
     final picked = await _picker.pickMultiImage(imageQuality: 80);
@@ -278,6 +288,11 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       return;
     }
 
+    if (_farmerFacePhoto == null) {
+      _showErrorDialog('Please capture the farmer\'s face photo for verification.');
+      return;
+    }
+
     if (_photoFiles.isEmpty) {
       _showErrorDialog('Please upload at least one proof of delivery photo for verification.');
       return;
@@ -300,7 +315,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
     if (widget.customer.photoUrls != null && widget.customer.photoUrls!.isNotEmpty) {
       try {
         final registeredPhotoUrl = widget.customer.photoUrls!.first;
-        final deliveryPhotoPath = _photoFiles.first.path;
+        final deliveryPhotoPath = _farmerFacePhoto!.path;
 
         // Download the registered photo to a temp file
         final tempDir = await getTemporaryDirectory();
@@ -339,6 +354,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       widget.customer.id, 
       _videoPath, 
       _photoFiles.map((e) => e.path).toList(),
+      _farmerFacePhoto!.path,
     );
     
     if (!mounted) return;
@@ -362,6 +378,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       items: updatedCustomer.items,
       photoPaths: _photoFiles.map((e) => e.path).toList(),
       videoPath: _videoPath,
+      farmerFacePhotoPath: _farmerFacePhoto!.path,
     );
 
     if (mounted) {
@@ -773,8 +790,108 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                 ),
               ),
 
-              // Photo Upload
+              // Face Verification
               _buildAnimatedItem(3,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _kSurface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _kTextPrimary.withOpacity(0.04),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Face Verification',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: _kTextPrimary,
+                            ),
+                          ),
+                          if (_farmerFacePhoto != null)
+                            const Icon(Icons.check_circle, color: _kSuccess)
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_farmerFacePhoto != null)
+                        Stack(
+                          children: [
+                            Container(
+                              height: 160,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                image: DecorationImage(
+                                  image: FileImage(_farmerFacePhoto!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _farmerFacePhoto = null),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        InkWell(
+                          onTap: _pickFarmerFacePhoto,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            height: 160,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: _kBackground,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid, width: 2),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.camera_alt_rounded, size: 48, color: _kPrimary),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Tap to capture farmer face',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: _kTextSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Photo Upload
+              _buildAnimatedItem(4,
                 Container(
                   decoration: BoxDecoration(
                     color: _kSurface,
@@ -922,7 +1039,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
               ),
 
               // Video Upload
-              _buildAnimatedItem(4,
+              _buildAnimatedItem(5,
                 Container(
                   decoration: BoxDecoration(
                     color: _kSurface,
@@ -1040,7 +1157,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
               ),
 
               // Submit Button
-              _buildAnimatedItem(5,
+              _buildAnimatedItem(6,
                 Container(
                   decoration: BoxDecoration(
                     boxShadow: [
