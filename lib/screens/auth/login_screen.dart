@@ -26,6 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _otpControllers = List.generate(4, (_) => TextEditingController());
   final _otpFocusNodes = List.generate(4, (_) => FocusNode());
   
+  bool _isLoading = false;
+  
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -58,9 +60,11 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() { _isLoading = true; });
     final authProvider = context.read<AuthProvider>();
     final exists = await authProvider.checkPhoneAndRequestOtp(rawPhone);
     if (!mounted) return;
+    setState(() { _isLoading = false; });
     
     if (exists) {
       setState(() => _flowState = LoginFlowState.registerOtp);
@@ -86,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(nameText) || nameText.length < 2 || nameText.length > 50) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter the valid name.')),
+        const SnackBar(content: Text('Name must be 2-50 characters long and contain only letters and spaces.')),
       );
       return;
     }
@@ -106,9 +110,11 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() { _isLoading = true; });
     final authProvider = context.read<AuthProvider>();
     await authProvider.startRegistration(rawPhone);
     if (!mounted) return;
+    setState(() { _isLoading = false; });
 
     // Go to OTP screen
     setState(() {
@@ -132,10 +138,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() { _isLoading = true; });
     final authProvider = context.read<AuthProvider>();
     final success = await authProvider.verifyOtpAndLogin(_enteredOtp);
     
     if (!mounted) return;
+    setState(() { _isLoading = false; });
+
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -146,19 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (authProvider.isRegistrationFlow) {
-      await authProvider.completeProfile(
-        fullName: _nameController.text.trim(),
-        email: '',
-        aadhaar: _aadhaarController.text.trim(),
-        address: 'Sector 132',
-        city: 'Noida',
-        state: 'UP',
-        pincode: '201304',
-        vehicleType: 'Bike',
-        vehicleNumber: 'NA',
-      );
-    }
+    // Success handled by AuthGate reacting to status change, no need to navigate manually
+    // or submit hardcoded profile data.
   }
 
   Widget _buildInitialView() {
@@ -216,13 +214,15 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 24),
         ElevatedButton(
-          onPressed: _handleLoginSubmit,
+          onPressed: _isLoading ? null : _handleLoginSubmit,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E7D32),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: _isLoading 
+            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         ),
         const SizedBox(height: 16),
         TextButton(
@@ -287,13 +287,15 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: _handleRegisterSubmit,
+            onPressed: _isLoading ? null : _handleRegisterSubmit,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D32),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Send OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+            child: _isLoading
+                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Send OTP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           ),
           const SizedBox(height: 16),
           TextButton(
@@ -338,63 +340,65 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(4, (i) {
-            return SizedBox(
-              width: 56,
-              child: Focus(
-                onKeyEvent: (node, event) {
-                  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
-                    if (_otpControllers[i].text.isEmpty && i > 0) {
-                      _otpFocusNodes[i - 1].requestFocus();
-                      return KeyEventResult.handled;
-                    }
-                  }
-                  return KeyEventResult.ignored;
-                },
-                child: TextField(
-                  controller: _otpControllers[i],
-                  focusNode: _otpFocusNodes[i],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(2),
-                  ],
-                  decoration: InputDecoration(
-                    counterText: '',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
-                    ),
-                  ),
-                  onChanged: (val) {
-                    if (val.length == 2) {
-                      _otpControllers[i].text = val[0];
-                      if (i < 3) {
-                        _otpControllers[i + 1].text = val[1];
-                        _otpControllers[i + 1].selection = const TextSelection.collapsed(offset: 1);
-                        _otpFocusNodes[i + 1].requestFocus();
+            return              SizedBox(
+                width: 56,
+                child: Focus(
+                  onKeyEvent: (node, event) {
+                    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+                      if (_otpControllers[i].text.isEmpty && i > 0) {
+                        _otpControllers[i - 1].clear();
+                        _otpFocusNodes[i - 1].requestFocus();
+                        return KeyEventResult.handled;
                       }
-                    } else if (val.length == 1 && i < 3) {
-                      _otpFocusNodes[i + 1].requestFocus();
-                    } else if (val.isEmpty && i > 0) {
-                      _otpFocusNodes[i - 1].requestFocus();
                     }
+                    return KeyEventResult.ignored;
                   },
+                  child: TextField(
+                    controller: _otpControllers[i],
+                    focusNode: _otpFocusNodes[i],
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(2),
+                    ],
+                    decoration: InputDecoration(
+                      counterText: '',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+                      ),
+                    ),
+                    onChanged: (val) {
+                      if (val.length == 2) {
+                        _otpControllers[i].text = val.substring(1);
+                        _otpControllers[i].selection = const TextSelection.collapsed(offset: 1);
+                        if (i < 3) {
+                          _otpFocusNodes[i + 1].requestFocus();
+                        }
+                      } else if (val.length == 1 && i < 3) {
+                        _otpFocusNodes[i + 1].requestFocus();
+                      } else if (val.isEmpty && i > 0) {
+                        _otpFocusNodes[i - 1].requestFocus();
+                      }
+                    },
+                  ),
                 ),
-              ),
-            );
+              );
           }),
         ),
         const SizedBox(height: 28),
         ElevatedButton(
-          onPressed: _handleOtpSubmit,
+          onPressed: _isLoading ? null : _handleOtpSubmit,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF2E7D32),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          child: _isLoading
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Done', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
         ),
         const SizedBox(height: 16),
         TextButton(

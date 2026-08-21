@@ -789,6 +789,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                               onKeyEvent: (node, event) {
                                 if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
                                   if (_otpControllers[i].text.isEmpty && i > 0) {
+                                    _otpControllers[i - 1].clear();
                                     _otpFocusNodes[i - 1].requestFocus();
                                     return KeyEventResult.handled;
                                   }
@@ -831,16 +832,13 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                                 ),
                                 onChanged: (val) {
                                   if (val.length == 2) {
-                                    _otpControllers[i].text = val[0];
+                                    _otpControllers[i].text = val.substring(1);
+                                    _otpControllers[i].selection = const TextSelection.collapsed(offset: 1);
                                     if (i < 3) {
-                                      _otpControllers[i + 1].text = val[1];
-                                      _otpControllers[i + 1].selection = const TextSelection.collapsed(offset: 1);
                                       _otpFocusNodes[i + 1].requestFocus();
                                     }
                                   } else if (val.length == 1 && i < 3) {
                                     _otpFocusNodes[i + 1].requestFocus();
-                                  } else if (val.isEmpty && i > 0) {
-                                    _otpFocusNodes[i - 1].requestFocus();
                                   }
                                 },
                               ),

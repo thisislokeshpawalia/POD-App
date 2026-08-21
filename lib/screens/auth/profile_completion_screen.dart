@@ -212,7 +212,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return 'Full Name is required';
                   }
                   if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(v.trim()) || v.trim().length < 2) {
-                    return 'Please enter the valid name';
+                    return 'Name must be 2-50 characters long and contain only letters and spaces.';
                   }
                   return null;
                 },
