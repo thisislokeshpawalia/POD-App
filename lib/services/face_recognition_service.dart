@@ -156,7 +156,8 @@ class FaceRecognitionService {
     final distance = _euclideanDistance(emb1, emb2);
     debugPrint('Face Euclidean Distance: $distance');
     
-    // Threshold is typically around 1.15 for L2 normalized MobileFaceNet distance
-    return distance < 1.15;
+    // Threshold was 1.15, but that is too lenient and allows false positives.
+    // Lowering to 0.9 for strict matching (must be the same person).
+    return distance < 0.9;
   }
 }

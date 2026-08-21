@@ -155,15 +155,47 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
   }
 
   Future<void> _pickPhoto() async {
-    final picked = await _picker.pickMultiImage(imageQuality: 80);
-    if (picked.isNotEmpty) {
-      setState(() {
-        for (var file in picked) {
-          if (_photoFiles.length < 5) {
-            _photoFiles.add(File(file.path));
-          }
+    final ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () => Navigator.pop(ctx, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
+
+    if (source != null) {
+      if (source == ImageSource.camera) {
+        final picked = await _picker.pickImage(source: source, imageQuality: 80);
+        if (picked != null) {
+          setState(() {
+            if (_photoFiles.length < 5) {
+              _photoFiles.add(File(picked.path));
+            }
+          });
         }
-      });
+      } else {
+        final picked = await _picker.pickMultiImage(imageQuality: 80);
+        if (picked.isNotEmpty) {
+          setState(() {
+            for (var file in picked) {
+              if (_photoFiles.length < 5) {
+                _photoFiles.add(File(file.path));
+              }
+            }
+          });
+        }
+      }
     }
   }
 
