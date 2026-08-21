@@ -19,7 +19,7 @@ def upload_video(file_path: str, public_id: str) -> str:
         file_path,
         resource_type="video",
         public_id=public_id,
-        folder="pod_proofs",
+        folder="POD-App/proofs",
     )
     
     # Return the secure https url
@@ -35,7 +35,7 @@ def upload_pdf(file_path: str, public_id: str) -> str:
         file_path,
         resource_type="image", # Use image for PDFs to allow web delivery
         public_id=public_id,
-        folder="pod_invoices",
+        folder="POD-App/invoices",
     )
     
     return response.get("secure_url")
@@ -46,6 +46,6 @@ def upload_image(file_path: str, public_id: str) -> str:
         file_path,
         resource_type="image",
         public_id=public_id,
-        folder="pod_proofs",
+        folder="POD-App/proofs",
     )
     return response.get("secure_url")

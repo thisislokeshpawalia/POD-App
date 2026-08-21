@@ -134,11 +134,10 @@ class FarmerProvider with ChangeNotifier {
       return false;
     }
   }
-
-  Future<bool> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths, String? facePhotoPath) async {
+  Future<bool> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths, String? facePhotoPath, {String? invoicePdfPath}) async {
     _errorMessage = null;
     try {
-      final updated = await _farmerRepository.uploadProofAndMarkDelivered(farmerId, videoPath, photoPaths, facePhotoPath);
+      final updated = await _farmerRepository.uploadProofAndMarkDelivered(farmerId, videoPath, photoPaths, facePhotoPath, invoicePdfPath: invoicePdfPath);
       final index = _farmers.indexWhere((f) => f.id == farmerId);
       if (index != -1) {
         _farmers[index] = updated;

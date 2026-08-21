@@ -61,7 +61,7 @@ class FarmerService {
     return Customer.fromJson(response);
   }
 
-  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths, String? facePhotoPath) async {
+  Future<Customer> uploadProofAndMarkDelivered(String farmerId, String? videoPath, List<String> photoPaths, String? facePhotoPath, {String? invoicePdfPath}) async {
     final Map<String, dynamic> files = {};
     if (videoPath != null) {
       files['video'] = videoPath;
@@ -71,6 +71,9 @@ class FarmerService {
     }
     if (facePhotoPath != null) {
       files['face_photo'] = facePhotoPath;
+    }
+    if (invoicePdfPath != null) {
+      files['invoice_pdf'] = invoicePdfPath;
     }
 
     final response = await _apiService.sendMultipart(

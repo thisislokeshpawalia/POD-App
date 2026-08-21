@@ -9,6 +9,7 @@ import '../models/customer.dart';
 import '../models/delivery_log.dart';
 import '../providers/farmer_provider.dart';
 import '../services/face_recognition_service.dart';
+import '../services/invoice_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'delivery_log_screen.dart';
@@ -379,6 +380,18 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
     widget.onCustomerDelivered(widget.customer.id);
     if (!mounted) return;
     
+    String? invoicePath;
+    try {
+      invoicePath = await InvoiceService.generateInvoicePdf(
+        customer: widget.customer,
+        deliveryDate: DateTime.now(),
+        photoPaths: _photoFiles.map((e) => e.path).toList(),
+        farmerFacePhotoPath: _farmerFacePhoto!.path,
+      );
+    } catch (e) {
+      debugPrint("Error generating invoice during submission: $e");
+    }
+
     bool success = false;
     final provider = context.read<FarmerProvider>();
     success = await provider.uploadProofAndMarkDelivered(
@@ -386,6 +399,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
       _videoPath, 
       _photoFiles.map((e) => e.path).toList(),
       _farmerFacePhoto!.path,
+      invoicePdfPath: invoicePath,
     );
     
     if (!mounted) return;

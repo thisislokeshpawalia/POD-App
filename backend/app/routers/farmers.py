@@ -4,7 +4,7 @@ import os
 import shutil
 import uuid
 import json
-from app.services.cloudinary_service import upload_video, upload_image
+from app.services.cloudinary_service import upload_video, upload_image, upload_pdf
 from app.auth import get_current_partner
 from app.database import get_db
 from app.models import DeliveryStatus
@@ -148,6 +148,7 @@ async def upload_proof_of_delivery(
     video: Optional[UploadFile] = File(None),
     photos: Optional[List[UploadFile]] = File(None),
     face_photo: Optional[UploadFile] = File(None),
+    invoice_pdf: Optional[UploadFile] = File(None),
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
@@ -187,12 +188,21 @@ async def upload_proof_of_delivery(
             face_photo_url = upload_image(tmp_p, f"Proof_Face_{farmer_id}")
             if os.path.exists(tmp_p): os.remove(tmp_p)
 
+        invoice_url = None
+        if invoice_pdf and invoice_pdf.filename:
+            tmp_p = f"temp_{farmer_id}_invoice.pdf"
+            with open(tmp_p, "wb") as buffer:
+                shutil.copyfileobj(invoice_pdf.file, buffer)
+            invoice_url = upload_pdf(tmp_p, f"Invoice_{farmer_id}")
+            if os.path.exists(tmp_p): os.remove(tmp_p)
+
         update_data = {
             "status": DeliveryStatus.delivered,
         }
         if video_url: update_data["video_url"] = video_url
         if photo_urls: update_data["proof_photo_urls"] = photo_urls
         if face_photo_url: update_data["farmer_face_photo_url"] = face_photo_url
+        if invoice_url: update_data["invoice_url"] = invoice_url
 
         db.farmers.update_one({"_id": farmer["_id"]}, {"$set": update_data})
         farmer.update(update_data)
