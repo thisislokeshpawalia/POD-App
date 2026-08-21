@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import '../models/delivery_log.dart';
 import '../services/invoice_service.dart';
+import 'pdf_viewer_screen.dart';
 
 class DeliveryLogScreen extends StatelessWidget {
   final DeliveryLog deliveryLog;
@@ -194,9 +195,21 @@ class DeliveryLogScreen extends StatelessWidget {
                     photoPaths: deliveryLog.photoPaths,
                     farmerFacePhotoPath: deliveryLog.farmerFacePhotoPath,
                   );
-                  await OpenFilex.open(path);
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PdfViewerScreen(path: path),
+                      ),
+                    );
+                  }
                 } catch (e) {
                   debugPrint("Error generating invoice: $e");
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error generating invoice: $e')),
+                    );
+                  }
                 }
               },
               icon: const Icon(Icons.picture_as_pdf),

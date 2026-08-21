@@ -4,6 +4,7 @@ import 'package:open_filex/open_filex.dart';
 import '../models/customer.dart';
 import '../services/invoice_service.dart';
 import 'order_completion_screen.dart';
+import 'pdf_viewer_screen.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
   final Customer customer;
@@ -262,9 +263,21 @@ class CustomerDetailScreen extends StatelessWidget {
                       deliveryDate: DateTime.now(), // Fallback for past deliveries
                       photoPaths: customer.photoUrls ?? customer.proofPhotoUrls,
                     );
-                    await OpenFilex.open(path);
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PdfViewerScreen(path: path),
+                        ),
+                      );
+                    }
                   } catch (e) {
                     debugPrint("Error generating invoice: $e");
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error generating invoice: $e')),
+                      );
+                    }
                   }
                 },
                 icon: const Icon(Icons.picture_as_pdf),

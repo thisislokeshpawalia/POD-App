@@ -20,7 +20,7 @@ class InvoiceService {
     bool forceOverwrite = false,
   }) async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await getTemporaryDirectory();
       final invoiceDirectory = Directory('${directory.path}/invoices');
 
       if (!await invoiceDirectory.exists()) {
