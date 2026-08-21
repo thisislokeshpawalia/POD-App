@@ -354,8 +354,17 @@ class _FarmerFormDialogState extends State<FarmerFormDialog> {
                   children: [
                     TextFormField(
                       controller: _nameController,
-                      decoration: _inputDecoration('Farmer Name'),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                      maxLength: 50,
+                      decoration: _inputDecoration('Farmer Name').copyWith(counterText: ''),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Name is required';
+                        }
+                        if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(v.trim()) || v.trim().length < 2) {
+                          return 'Please enter the valid name';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

@@ -76,9 +76,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleRegisterSubmit() async {
     FocusScope.of(context).unfocus();
-    if (_nameController.text.trim().isEmpty) {
+    final nameText = _nameController.text.trim();
+    if (nameText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your full name.')),
+      );
+      return;
+    }
+
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(nameText) || nameText.length < 2 || nameText.length > 50) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the valid name.')),
       );
       return;
     }
@@ -239,11 +247,13 @@ class _LoginScreenState extends State<LoginScreen> {
           TextFormField(
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
+            maxLength: 50,
             decoration: InputDecoration(
               labelText: 'Full Name',
               hintText: 'Enter your full name',
               prefixIcon: const Icon(Icons.person, color: Color(0xFF2E7D32)),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              counterText: '',
             ),
           ),
           const SizedBox(height: 16),
@@ -330,28 +340,48 @@ class _LoginScreenState extends State<LoginScreen> {
           children: List.generate(4, (i) {
             return SizedBox(
               width: 56,
-              child: TextField(
-                controller: _otpControllers[i],
-                focusNode: _otpFocusNodes[i],
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: 1,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  counterText: '',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
-                  ),
-                ),
-                onChanged: (val) {
-                  if (val.isNotEmpty && i < 3) {
-                    _otpFocusNodes[i + 1].requestFocus();
-                  } else if (val.isEmpty && i > 0) {
-                    _otpFocusNodes[i - 1].requestFocus();
+              child: Focus(
+                onKeyEvent: (node, event) {
+                  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+                    if (_otpControllers[i].text.isEmpty && i > 0) {
+                      _otpFocusNodes[i - 1].requestFocus();
+                      return KeyEventResult.handled;
+                    }
                   }
+                  return KeyEventResult.ignored;
                 },
+                child: TextField(
+                  controller: _otpControllers[i],
+                  focusNode: _otpFocusNodes[i],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+                    ),
+                  ),
+                  onChanged: (val) {
+                    if (val.length == 2) {
+                      _otpControllers[i].text = val[0];
+                      if (i < 3) {
+                        _otpControllers[i + 1].text = val[1];
+                        _otpControllers[i + 1].selection = const TextSelection.collapsed(offset: 1);
+                        _otpFocusNodes[i + 1].requestFocus();
+                      }
+                    } else if (val.length == 1 && i < 3) {
+                      _otpFocusNodes[i + 1].requestFocus();
+                    } else if (val.isEmpty && i > 0) {
+                      _otpFocusNodes[i - 1].requestFocus();
+                    }
+                  },
+                ),
               ),
             );
           }),

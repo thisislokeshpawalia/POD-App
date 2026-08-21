@@ -200,12 +200,22 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               // Full Name
               TextFormField(
                 controller: _nameController,
+                maxLength: 50,
                 decoration: const InputDecoration(
                   labelText: 'Full Name *',
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
+                  counterText: '',
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Full Name is required' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Full Name is required';
+                  }
+                  if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(v.trim()) || v.trim().length < 2) {
+                    return 'Please enter the valid name';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 

@@ -739,47 +739,65 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
                           return SizedBox(
                             width: 64,
                             height: 72,
-                            child: TextField(
-                              controller: _otpControllers[i],
-                              focusNode: _otpFocusNodes[i],
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              maxLength: 1,
-                              style: const TextStyle(
-                                fontSize: 28, 
-                                fontWeight: FontWeight.w800,
-                                color: _kPrimaryDark,
-                              ),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                              ],
-                              decoration: InputDecoration(
-                                counterText: '',
-                                filled: true,
-                                fillColor: _kBackground,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
+                            child: Focus(
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+                                  if (_otpControllers[i].text.isEmpty && i > 0) {
+                                    _otpFocusNodes[i - 1].requestFocus();
+                                    return KeyEventResult.handled;
+                                  }
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: TextField(
+                                controller: _otpControllers[i],
+                                focusNode: _otpFocusNodes[i],
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 28, 
+                                  fontWeight: FontWeight.w800,
+                                  color: _kPrimaryDark,
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(
-                                    color: _kPrimary,
-                                    width: 2.5,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(2),
+                                ],
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  filled: true,
+                                  fillColor: _kBackground,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: const BorderSide(
+                                      color: _kPrimary,
+                                      width: 2.5,
+                                    ),
                                   ),
                                 ),
+                                onChanged: (val) {
+                                  if (val.length == 2) {
+                                    _otpControllers[i].text = val[0];
+                                    if (i < 3) {
+                                      _otpControllers[i + 1].text = val[1];
+                                      _otpControllers[i + 1].selection = const TextSelection.collapsed(offset: 1);
+                                      _otpFocusNodes[i + 1].requestFocus();
+                                    }
+                                  } else if (val.length == 1 && i < 3) {
+                                    _otpFocusNodes[i + 1].requestFocus();
+                                  } else if (val.isEmpty && i > 0) {
+                                    _otpFocusNodes[i - 1].requestFocus();
+                                  }
+                                },
                               ),
-                              onChanged: (val) {
-                                if (val.isNotEmpty && i < 3) {
-                                  _otpFocusNodes[i + 1].requestFocus();
-                                } else if (val.isEmpty && i > 0) {
-                                  _otpFocusNodes[i - 1].requestFocus();
-                                }
-                              },
                             ),
                           );
                         }),
