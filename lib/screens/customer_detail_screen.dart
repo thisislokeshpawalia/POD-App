@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:open_filex/open_filex.dart';
 import '../models/customer.dart';
 import '../services/invoice_service.dart';
 import 'order_completion_screen.dart';

@@ -393,6 +393,7 @@ class _OrderCompletionScreenState extends State<OrderCompletionScreen> with Sing
     }
 
     bool success = false;
+    if (!mounted) return;
     final provider = context.read<FarmerProvider>();
     success = await provider.uploadProofAndMarkDelivered(
       widget.customer.id, 

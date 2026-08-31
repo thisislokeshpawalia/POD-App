@@ -1,15 +1,22 @@
+import os
+import shutil
+import uuid
 import random
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from app.auth import create_access_token, get_current_partner, hash_password, verify_password
 from app.database import get_db
+from app.services.cloudinary_service import upload_image
 from app.schemas import (
     AuthRequest, AuthResponse, DeliveryPartnerResponse,
     OtpSendRequest, OtpSendResponse, OtpVerifyRequest,
     OtpVerifyResponse, PhoneCheckRequest, PhoneCheckResponse,
     ProfileUpdateRequest
 )
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -51,12 +58,44 @@ def login_or_register(payload: AuthRequest, db = Depends(get_db)):
     )
 
 @router.patch("/profile", response_model=DeliveryPartnerResponse)
-def update_profile(
-    payload: ProfileUpdateRequest,
+async def update_profile(
+    request: Request,
     db = Depends(get_db),
     partner = Depends(get_current_partner),
 ):
-    update_data = payload.model_dump(exclude_unset=True)
+    content_type = request.headers.get("content-type", "")
+    update_data = {}
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        for field in ["name", "email", "address", "city", "state", "pincode", "vehicle_type", "vehicle_number", "aadhaar"]:
+            val = form.get(field)
+            if val is not None and str(val).strip():
+                update_data[field] = str(val).strip()
+        
+        photo = form.get("profile_image")
+        if photo and hasattr(photo, "filename") and photo.filename:
+            ext = photo.filename.split(".")[-1] if "." in photo.filename else "jpg"
+            photo_filename = f"partner_{uuid.uuid4()}.{ext}"
+            photo_path = os.path.join(UPLOAD_DIR, photo_filename)
+            with open(photo_path, "wb") as buffer:
+                shutil.copyfileobj(photo.file, buffer)
+            try:
+                cloud_url = upload_image(photo_path, public_id=photo_filename)
+                update_data["profile_image"] = cloud_url
+            except Exception as e:
+                print(f"Cloudinary upload failed: {e}")
+            finally:
+                if os.path.exists(photo_path):
+                    os.remove(photo_path)
+    else:
+        try:
+            body = await request.json()
+            payload = ProfileUpdateRequest(**body)
+            update_data = payload.model_dump(exclude_unset=True)
+        except Exception:
+            pass
+
     if update_data:
         db.delivery_partners.update_one({"id": partner["id"]}, {"$set": update_data})
         partner.update(update_data)
