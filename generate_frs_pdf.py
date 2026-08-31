@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -33,18 +34,18 @@ class NumberedCanvas(canvas.Canvas):
         
         # Header (pages > 1)
         if self._pageNumber > 1:
-            self.drawString(54, 750, "POD App v1.2 — Functional Requirements Specification (FRS)")
+            self.drawString(54, 752, "Subsidy Delivery Partner (Pod Delivery) v1.2 — Functional Requirements Specification")
             self.setStrokeColor(colors.HexColor("#E2E8F0"))
             self.setLineWidth(0.5)
-            self.line(54, 744, 558, 744)
+            self.line(54, 746, 558, 746)
         
         # Footer
         page_str = f"Page {self._pageNumber} of {page_count}"
-        self.drawRightString(558, 36, page_str)
-        self.drawString(54, 36, "Developed By Lokesh Pawalia & Sarthak Srivastava | Confidential & Proprietary")
+        self.drawRightString(558, 34, page_str)
+        self.drawString(54, 34, "Developed By Lokesh Pawalia & Sarthak Srivastava | Official Release Document")
         self.setStrokeColor(colors.HexColor("#E2E8F0"))
         self.setLineWidth(0.5)
-        self.line(54, 46, 558, 46)
+        self.line(54, 44, 558, 44)
         self.restoreState()
 
 def build_pdf(filename="FRS_POD_App_v1.2.pdf"):
@@ -59,41 +60,39 @@ def build_pdf(filename="FRS_POD_App_v1.2.pdf"):
 
     styles = getSampleStyleSheet()
 
-    # Custom styles
     primary_color = colors.HexColor("#1E3A8A")  # Deep Navy Blue
     accent_color = colors.HexColor("#2E7D32")   # Forest Green
     text_color = colors.HexColor("#1E293B")     # Dark Slate
-    muted_color = colors.HexColor("#64748B")    # Slate Muted
 
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=24,
-        leading=28,
+        fontSize=20,
+        leading=24,
         textColor=primary_color,
-        spaceAfter=6,
+        spaceAfter=4,
     )
 
     subtitle_style = ParagraphStyle(
         'DocSubtitle',
         parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=12,
-        leading=16,
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=15,
         textColor=accent_color,
-        spaceAfter=14,
+        spaceAfter=12,
     )
 
     h1_style = ParagraphStyle(
         'SectionH1',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=14,
-        leading=18,
+        fontSize=12,
+        leading=16,
         textColor=primary_color,
-        spaceBefore=14,
-        spaceAfter=6,
+        spaceBefore=12,
+        spaceAfter=5,
         keepWithNext=True,
     )
 
@@ -101,11 +100,11 @@ def build_pdf(filename="FRS_POD_App_v1.2.pdf"):
         'SectionH2',
         parent=styles['Heading2'],
         fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=15,
+        fontSize=10,
+        leading=14,
         textColor=accent_color,
-        spaceBefore=10,
-        spaceAfter=4,
+        spaceBefore=8,
+        spaceAfter=3,
         keepWithNext=True,
     )
 
@@ -113,29 +112,29 @@ def build_pdf(filename="FRS_POD_App_v1.2.pdf"):
         'DocBody',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=9.5,
-        leading=14,
+        fontSize=8.5,
+        leading=12.5,
         textColor=text_color,
-        spaceAfter=6,
+        spaceAfter=5,
     )
 
     bullet_style = ParagraphStyle(
         'DocBullet',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=9,
-        leading=13.5,
+        fontSize=8.5,
+        leading=12,
         textColor=text_color,
-        leftIndent=14,
-        spaceAfter=4,
+        leftIndent=12,
+        spaceAfter=3,
     )
 
-    table_cell_style = ParagraphStyle(
+    table_cell = ParagraphStyle(
         'TableCell',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8.5,
-        leading=11,
+        fontSize=7.5,
+        leading=10,
         textColor=text_color,
     )
 
@@ -143,200 +142,188 @@ def build_pdf(filename="FRS_POD_App_v1.2.pdf"):
         'TableCellBold',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=8.5,
-        leading=11,
+        fontSize=7.5,
+        leading=10,
         textColor=text_color,
     )
 
-    table_header_style = ParagraphStyle(
+    table_header = ParagraphStyle(
         'TableHeader',
         parent=styles['Normal'],
         fontName='Helvetica-Bold',
-        fontSize=8.5,
-        leading=11,
+        fontSize=8,
+        leading=10.5,
         textColor=colors.white,
-    )
-
-    meta_label_style = ParagraphStyle(
-        'MetaLabel',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=12,
-        textColor=primary_color,
-    )
-
-    meta_val_style = ParagraphStyle(
-        'MetaVal',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9,
-        leading=12,
-        textColor=text_color,
     )
 
     story = []
 
-    # Title block
-    story.append(Spacer(1, 10))
+    # Title
     story.append(Paragraph("Functional Requirements Specification (FRS)", title_style))
-    story.append(Paragraph("Project: Proof of Delivery (POD) Application — Version 1.2", subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=2, color=accent_color, spaceAfter=14))
+    story.append(Paragraph("Subsidy Delivery Partner (Pod Delivery App) — Version 1.2", subtitle_style))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=accent_color, spaceAfter=10))
 
-    # Metadata table
-    meta_data = [
-        [Paragraph("Application Name:", meta_label_style), Paragraph("Proof of Delivery (POD) App", meta_val_style),
-         Paragraph("Version:", meta_label_style), Paragraph("1.2", meta_val_style)],
-        [Paragraph("Developed By:", meta_label_style), Paragraph("Lokesh Pawalia & Sarthak Srivastava", meta_val_style),
-         Paragraph("Date:", meta_label_style), Paragraph("August 31, 2026", meta_val_style)],
-        [Paragraph("Frontend Tech:", meta_label_style), Paragraph("Flutter SDK (Dart / Android)", meta_val_style),
-         Paragraph("Backend Tech:", meta_label_style), Paragraph("FastAPI (Python 3.11) + MongoDB", meta_val_style)],
-        [Paragraph("Cloud Hosting:", meta_label_style), Paragraph("Railway Production Cloud", meta_val_style),
-         Paragraph("Media CDN:", meta_label_style), Paragraph("Cloudinary Digital Asset Management", meta_val_style)],
+    # 1. Document Control
+    story.append(Paragraph("1. Document Control", h1_style))
+    doc_control_data = [
+        [Paragraph("Application Name", table_cell_bold), Paragraph("Subsidy Delivery Partner (Pod Delivery)", table_cell)],
+        [Paragraph("Document Version", table_cell_bold), Paragraph("1.2", table_cell)],
+        [Paragraph("Prepared / Developed By", table_cell_bold), Paragraph("Lokesh Pawalia and Sarthak Srivastava", table_cell)],
+        [Paragraph("Prepared Date", table_cell_bold), Paragraph("August 31, 2026", table_cell)],
+        [Paragraph("Reviewed & Approved By", table_cell_bold), Paragraph("Lokesh Pawalia & Sarthak Srivastava", table_cell)],
+        [Paragraph("Document Status", table_cell_bold), Paragraph("Approved & Production Ready", table_cell)],
+        [Paragraph("Live Cloud Backend", table_cell_bold), Paragraph("Railway Production: https://pod-app-production-818a.up.railway.app", table_cell)],
+        [Paragraph("Database & Storage", table_cell_bold), Paragraph("MongoDB Atlas (pody_db) | Cloudinary Media CDN", table_cell)],
     ]
-    meta_table = Table(meta_data, colWidths=[100, 160, 90, 154])
-    meta_table.setStyle(TableStyle([
+    t_ctrl = Table(doc_control_data, colWidths=[150, 354])
+    t_ctrl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F8FAFC")),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
     ]))
-    story.append(meta_table)
-    story.append(Spacer(1, 14))
-
-    # Section 1: Executive Summary
-    story.append(Paragraph("1. Executive Summary & Objectives", h1_style))
-    story.append(Paragraph(
-        "The <b>Proof of Delivery (POD) App (Version 1.2)</b> is an enterprise-grade mobile and cloud verification ecosystem designed to track, manage, and cryptographically audit the physical distribution of government and organizational subsidies to beneficiaries (farmers).",
-        body_style
-    ))
-    story.append(Paragraph(
-        "The system completely prevents distribution fraud, identity impersonation, and phantom beneficiary leakage by enforcing an unalterable multi-stage handover protocol: biometric face verification, real-time OTP matching, multi-angle photographic and videographic proofs, GPS timestamping, and immediate digital invoice reconciliation.",
-        body_style
-    ))
-
-    # Section 2: User Hierarchy & System Roles
-    story.append(Paragraph("2. User Hierarchy & Roles", h1_style))
-    story.append(Paragraph("<b>• Delivery Partner (Field Agent):</b> Operative responsible for physical transit, client credential validation, biometric facial capture, and digital proof submission.", bullet_style))
-    story.append(Paragraph("<b>• Beneficiary (Farmer):</b> Authorized recipient of subsidized equipment or goods, verified through registered credentials and OTP verification.", bullet_style))
-    story.append(Paragraph("<b>• Central Administrator:</b> Administrative stakeholder monitoring live distribution audit logs, partner allocation, and Cloudinary media inspection.", bullet_style))
-
-    # Section 3: Functional Requirements by Module
-    story.append(Spacer(1, 6))
-    story.append(Paragraph("3. Functional Requirements by Module", h1_style))
-
-    # Module 1
-    story.append(Paragraph("Module 1: Partner Authentication & Identity Onboarding", h2_style))
-    story.append(Paragraph("<b>FR-1.1 Mobile Number & OTP Verification:</b> The system authenticates field operatives through a 10-digit mobile number and numeric One-Time Password verification (<code>POST /auth/send-otp</code> and <code>POST /auth/verify-otp</code>).", bullet_style))
-    story.append(Paragraph("<b>FR-1.2 Mandatory 8-Step Profile Completion Sequence:</b> Newly registered partners must complete an 8-field structured profile enforcing strict real-time data integrity before accessing delivery orders:", bullet_style))
-    
-    # 8 steps
-    steps = [
-        ("1. Full Name", "Restricted strictly to alphabetic characters and spaces via software keyboard filter (<code>FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\\s]'))</code>). Numbers and special characters are physically prevented. Length: 2 to 50 characters."),
-        ("2. Email Address", "Enforces RFC-compliant email formatting (<code>^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$</code>). Whitespace characters are blocked."),
-        ("3. PIN Code", "Exactly 6 numeric digits. Triggers an automated asynchronous background lookup to the Indian Postal API (<code>https://api.postalpincode.in/pincode/{PINCODE}</code>) upon entry of the 6th digit."),
-        ("4. City & State", "Automatically populated from the resolved PIN code data. Configured as read-only to eliminate manual entry mistakes, with an edit-toggle for edge-case overrides."),
-        ("5. Address", "Physical street/residential address with a mandatory minimum 5-character threshold."),
-        ("6. Vehicle Type", "Selection dropdown: Two Wheeler, Three Wheeler, Four Wheeler, or Other (defaults to Two Wheeler)."),
-        ("7. Vehicle Number", "Automatic uppercase transformation (<code>UpperCaseTextFormatter</code>). Validated against Indian Motor Vehicle standards (e.g. DL 01 AB 1234, UP 16 CP 6755, or Bharat Series)."),
-        ("8. Aadhaar Number", "Exactly 12 numeric digits. Follows UIDAI specifications prohibiting prefixes starting with 0 or 1 (<code>^[2-9][0-9]{11}$</code>)."),
-    ]
-    for step_title, step_desc in steps:
-        story.append(Paragraph(f"&nbsp;&nbsp;&nbsp;&nbsp;<b>{step_title}:</b> {step_desc}", bullet_style))
-    story.append(Paragraph("<b>FR-1.3 Profile Photo Cloud Sync:</b> Delivery partners must upload a valid facial profile photo, transmitted as <code>multipart/form-data</code> to <code>PATCH /auth/profile</code> and hosted securely on Cloudinary.", bullet_style))
-
-    # Module 2
-    story.append(Spacer(1, 6))
-    story.append(Paragraph("Module 2: Beneficiary & Delivery Management", h2_style))
-    story.append(Paragraph("<b>FR-2.1 Scoped Beneficiary Allocation:</b> Operatives only view records assigned to their unique partner identifier (<code>delivery_partner_id</code>), categorized dynamically as All, Pending, or Delivered.", bullet_style))
-    story.append(Paragraph("<b>FR-2.2 On-Demand Beneficiary Creation:</b> Field operatives can onboard new farmers with detailed metadata (Name, Village, District, PIN, GPS coordinates, itemized goods, and reference photograph).", bullet_style))
-    story.append(Paragraph("<b>FR-2.3 Direct Calling & Route Navigation:</b> Beneficiary cards integrate direct system telephony (<code>tel:</code>) and geospatial navigation (<code>geo:</code>) to facilitate field operations.", bullet_style))
-
-    # Module 3
-    story.append(Spacer(1, 6))
-    story.append(Paragraph("Module 3: Multi-Stage Proof of Delivery (POD) Protocol", h2_style))
-    story.append(Paragraph("To eliminate proxy collections, delivery completion requires passing five consecutive verification gates:", body_style))
-    
-    gates = [
-        ("Gate 1: Beneficiary OTP Handover", "Recipient provides the unique 4-digit SMS handover code generated for their subsidy parcel."),
-        ("Gate 2: On-Device Facial Biometrics", "Google ML Kit executes local landmark detection and facial matching against the beneficiary's registered reference image without sending unencrypted biometric data over the wire."),
-        ("Gate 3: Multi-Angle Photographic Proof", "Operative captures 1 to 5 high-resolution photos documenting the recipient receiving the subsidy goods in their physical context."),
-        ("Gate 4: Video Handover Audit", "Live video recording (up to 30 seconds) documenting physical item transfer and audible confirmation."),
-        ("Gate 5: Geotagging & Geofencing Stamp", "Device GPS coordinates are stamped with exact date/time and embedded into the immutable audit record."),
-    ]
-    for gate_title, gate_desc in gates:
-        story.append(Paragraph(f"<b>• {gate_title}:</b> {gate_desc}", bullet_style))
-
-    # Module 4
-    story.append(Spacer(1, 6))
-    story.append(Paragraph("Module 4: Automated Invoicing & PDF Inspection", h2_style))
-    story.append(Paragraph("<b>FR-4.1 Automated Digital Invoice:</b> Immediately upon delivery clearance, the system compiles a tamper-evident PDF invoice containing tracking IDs, items disbursed, partner details, recipient signature/photo, and GPS timestamps.", bullet_style))
-    story.append(Paragraph("<b>FR-4.2 Cloud Upload & In-App Native Inspection:</b> Invoices are synchronized to Cloudinary (<code>POD-App/invoices</code>) and displayed natively within the application via Syncfusion PDF Viewer with pan, zoom, and local download capabilities.", bullet_style))
-
-    # Section 4: API Specification Table
+    story.append(t_ctrl)
     story.append(Spacer(1, 8))
-    story.append(Paragraph("4. Backend API Specification Matrix", h1_style))
-    
-    api_data = [
-        [Paragraph("Method", table_header_style), Paragraph("Endpoint", table_header_style), Paragraph("Description", table_header_style), Paragraph("Payload", table_header_style), Paragraph("Auth", table_header_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/auth/check-phone", table_cell_style), Paragraph("Check if phone exists", table_cell_style), Paragraph("JSON", table_cell_style), Paragraph("Public", table_cell_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/auth/send-otp", table_cell_style), Paragraph("Dispatch SMS OTP", table_cell_style), Paragraph("JSON", table_cell_style), Paragraph("Public", table_cell_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/auth/verify-otp", table_cell_style), Paragraph("Verify partner OTP", table_cell_style), Paragraph("JSON", table_cell_style), Paragraph("Public", table_cell_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/auth/login-or-register", table_cell_style), Paragraph("Generate JWT session", table_cell_style), Paragraph("JSON", table_cell_style), Paragraph("Public", table_cell_style)],
-        [Paragraph("PATCH", table_cell_bold), Paragraph("/auth/profile", table_cell_style), Paragraph("Update profile & image", table_cell_style), Paragraph("Multipart / JSON", table_cell_style), Paragraph("Bearer", table_cell_style)],
-        [Paragraph("GET", table_cell_bold), Paragraph("/auth/me", table_cell_style), Paragraph("Current partner record", table_cell_style), Paragraph("None", table_cell_style), Paragraph("Bearer", table_cell_style)],
-        [Paragraph("GET", table_cell_bold), Paragraph("/farmers", table_cell_style), Paragraph("List assigned deliveries", table_cell_style), Paragraph("Query Params", table_cell_style), Paragraph("Bearer", table_cell_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/farmers", table_cell_style), Paragraph("Register new farmer", table_cell_style), Paragraph("Multipart (Form+Img)", table_cell_style), Paragraph("Bearer", table_cell_style)],
-        [Paragraph("POST", table_cell_bold), Paragraph("/farmers/{id}/upload_proof", table_cell_style), Paragraph("Submit POD proofs & invoice", table_cell_style), Paragraph("Multipart Data", table_cell_style), Paragraph("Bearer", table_cell_style)],
+
+    # 2. Purpose & Scope
+    story.append(Paragraph("2. Purpose & System Scope", h1_style))
+    story.append(Paragraph(
+        "<b>Purpose:</b> This specification defines the functional requirements for the Subsidy Delivery Partner (Pod Delivery) mobile platform and its cloud backend. Version 1.2 enforces tamper-proof delivery tracking, preventing subsidy diversion and identity impersonation through multi-factor validation.",
+        body_style
+    ))
+    story.append(Paragraph("<b>In Scope:</b> Partner authentication, mandatory 8-step profile onboarding with automatic postal PIN lookup, 600m geofence validation, on-device Google ML Kit facial verification, multi-angle item proof capture, video audit recording, automated PDF invoicing, and native in-app inspection.", body_style))
+    story.append(Paragraph("<b>Out of Scope:</b> Direct public farmer login portal and commercial payment gateway processing (focus is strictly on physical subsidy handover verification).", body_style))
+
+    # 3. User Roles
+    story.append(Paragraph("3. User Roles & Hierarchy", h1_style))
+    roles_data = [
+        [Paragraph("Role ID", table_header), Paragraph("User Role", table_header), Paragraph("Description", table_header), Paragraph("System Permissions", table_header)],
+        [Paragraph("UR-01", table_cell_bold), Paragraph("Delivery Partner", table_cell), Paragraph("Primary field operative delivering subsidy packages.", table_cell), Paragraph("Login, complete profile, view assigned deliveries, execute POD verification gates.", table_cell)],
+        [Paragraph("UR-02", table_cell_bold), Paragraph("Beneficiary (Farmer)", table_cell), Paragraph("Registered recipient entitled to subsidy items.", table_cell), Paragraph("Provides delivery OTP, physical face match, receives subsidized items.", table_cell)],
+        [Paragraph("UR-03", table_cell_bold), Paragraph("System Administrator", table_cell), Paragraph("Central supervisor monitoring operations and audit logs.", table_cell), Paragraph("Inspect MongoDB (pody_db), review Cloudinary media proofs, view delivery logs.", table_cell)],
     ]
-    api_table = Table(api_data, colWidths=[48, 140, 144, 112, 60])
-    api_table.setStyle(TableStyle([
+    t_roles = Table(roles_data, colWidths=[50, 100, 180, 174])
+    t_roles.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
+    ]))
+    story.append(t_roles)
+    story.append(Spacer(1, 8))
+
+    # 4. Functional Requirements Matrix
+    story.append(Paragraph("4. Functional Requirements Matrix", h1_style))
+
+    # Profile Module (8-step form)
+    story.append(Paragraph("4.1 Partner Authentication & Strict 8-Step Profile Onboarding", h2_style))
+    prof_data = [
+        [Paragraph("Req ID", table_header), Paragraph("Field / Step", table_header), Paragraph("Validation & Software Behavior Rule", table_header), Paragraph("Priority", table_header)],
+        [Paragraph("FR-PROF-01", table_cell_bold), Paragraph("1. Full Name", table_cell_bold), Paragraph("Alphabetical and space characters only via FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\\s]')). Digits & special characters are blocked. Length: 2-50 chars.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-02", table_cell_bold), Paragraph("2. Email Address", table_cell_bold), Paragraph("Validates RFC email regex ^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$. Whitespace characters are blocked.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-03", table_cell_bold), Paragraph("3. PIN Code", table_cell_bold), Paragraph("6 numeric digits. Entering the 6th digit auto-triggers an asynchronous lookup to the Indian Postal API (https://api.postalpincode.in/pincode/{PIN}).", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-04", table_cell_bold), Paragraph("4. City & State", table_cell_bold), Paragraph("Automatically populated from resolved PIN code. Fields are read-only with a manual edit/unlock toggle for offline overrides.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-05", table_cell_bold), Paragraph("5. Address", table_cell_bold), Paragraph("Detailed street / locality address. Mandatory minimum length of 5 characters.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-06", table_cell_bold), Paragraph("6. Vehicle Type", table_cell_bold), Paragraph("Structured selection dropdown: Two Wheeler, Three Wheeler, Four Wheeler, or Other.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-07", table_cell_bold), Paragraph("7. Vehicle Number", table_cell_bold), Paragraph("Auto-capitalized (UpperCaseTextFormatter). Enforces Indian registration format (e.g. DL 01 AB 1234 or BH Series).", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-08", table_cell_bold), Paragraph("8. Aadhaar Number", table_cell_bold), Paragraph("Exactly 12 numeric digits adhering to UIDAI specification (cannot start with 0 or 1: ^[2-9][0-9]{11}$).", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("FR-PROF-09", table_cell_bold), Paragraph("Profile Photo", table_cell_bold), Paragraph("Mandatory facial photo capture; streamed via multipart/form-data to PATCH /auth/profile and Cloudinary.", table_cell), Paragraph("P0", table_cell_bold)],
+    ]
+    t_prof = Table(prof_data, colWidths=[64, 96, 304, 40])
+    t_prof.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
+    ]))
+    story.append(t_prof)
+    story.append(Spacer(1, 6))
+
+    # Order Completion Module
+    story.append(Paragraph("4.2 Order Completion & 5 Verification Gates", h2_style))
+    ord_data = [
+        [Paragraph("Gate", table_header), Paragraph("Verification Stage", table_header), Paragraph("Technical Mechanism & Enforcement", table_header), Paragraph("Priority", table_header)],
+        [Paragraph("Gate 1", table_cell_bold), Paragraph("600m Geofencing", table_cell), Paragraph("Haversine distance calculation using GPS coordinates. Blocks submission if operative is >600m away.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("Gate 2", table_cell_bold), Paragraph("Beneficiary OTP", table_cell), Paragraph("Recipient enters unique 4-digit SMS delivery OTP. Handover cannot proceed without valid match.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("Gate 3", table_cell_bold), Paragraph("On-Device Face Match", table_cell), Paragraph("Google ML Kit detects facial landmarks from live camera and compares with registered farmer photo.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("Gate 4", table_cell_bold), Paragraph("Photo & Video Proof", table_cell), Paragraph("Operative captures 1 to 5 delivery item photos and an optional 30-second live handover video audit.", table_cell), Paragraph("P0", table_cell_bold)],
+        [Paragraph("Gate 5", table_cell_bold), Paragraph("PDF Invoicing & Sync", table_cell), Paragraph("Generates PDF invoice, uploads to Cloudinary (POD-App/invoices), marks order delivered in MongoDB.", table_cell), Paragraph("P0", table_cell_bold)],
+    ]
+    t_ord = Table(ord_data, colWidths=[50, 110, 304, 40])
+    t_ord.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
+    ]))
+    story.append(t_ord)
+    story.append(Spacer(1, 8))
+
+    # 5. API Specification Table
+    story.append(Paragraph("5. Cloud Backend API Specification Matrix", h1_style))
+    story.append(Paragraph("<b>Base URL:</b> https://pod-app-production-818a.up.railway.app | <b>Framework:</b> FastAPI + MongoDB", body_style))
+    api_data = [
+        [Paragraph("Method", table_header), Paragraph("Endpoint", table_header), Paragraph("Purpose", table_header), Paragraph("Payload", table_header), Paragraph("Auth", table_header)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/auth/check-phone", table_cell), Paragraph("Check if partner phone exists", table_cell), Paragraph("JSON", table_cell), Paragraph("Public", table_cell)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/auth/send-otp", table_cell), Paragraph("Dispatch SMS OTP to mobile", table_cell), Paragraph("JSON", table_cell), Paragraph("Public", table_cell)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/auth/verify-otp", table_cell), Paragraph("Verify 4-digit mobile OTP", table_cell), Paragraph("JSON", table_cell), Paragraph("Public", table_cell)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/auth/login-or-register", table_cell), Paragraph("Issue JWT bearer access token", table_cell), Paragraph("JSON", table_cell), Paragraph("Public", table_cell)],
+        [Paragraph("PATCH", table_cell_bold), Paragraph("/auth/profile", table_cell), Paragraph("Update 8-step profile & photo", table_cell), Paragraph("Multipart", table_cell), Paragraph("Bearer", table_cell)],
+        [Paragraph("GET", table_cell_bold), Paragraph("/auth/me", table_cell), Paragraph("Fetch authenticated partner info", table_cell), Paragraph("None", table_cell), Paragraph("Bearer", table_cell)],
+        [Paragraph("GET", table_cell_bold), Paragraph("/farmers", table_cell), Paragraph("List assigned deliveries", table_cell), Paragraph("Query Params", table_cell), Paragraph("Bearer", table_cell)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/farmers", table_cell), Paragraph("Register new farmer beneficiary", table_cell), Paragraph("Multipart", table_cell), Paragraph("Bearer", table_cell)],
+        [Paragraph("POST", table_cell_bold), Paragraph("/farmers/{id}/upload_proof", table_cell), Paragraph("Submit POD proofs, video & invoice", table_cell), Paragraph("Multipart", table_cell), Paragraph("Bearer", table_cell)],
+    ]
+    t_api = Table(api_data, colWidths=[48, 140, 156, 100, 60])
+    t_api.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), primary_color),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
+    ]))
+    story.append(t_api)
+    story.append(Spacer(1, 8))
+
+    # 6. Approvals & Sign-off
+    story.append(Paragraph("6. Document Approvals & Sign-Off", h1_style))
+    appr_data = [
+        [Paragraph("Project Role", table_header), Paragraph("Name", table_header), Paragraph("Sign-Off Status", table_header), Paragraph("Approval Date", table_header)],
+        [Paragraph("Lead Developer & Architect", table_cell_bold), Paragraph("Lokesh Pawalia", table_cell), Paragraph("Approved & Verified", table_cell_bold), Paragraph("August 31, 2026", table_cell)],
+        [Paragraph("Lead Developer & Backend Specialist", table_cell_bold), Paragraph("Sarthak Srivastava", table_cell), Paragraph("Approved & Verified", table_cell_bold), Paragraph("August 31, 2026", table_cell)],
+        [Paragraph("Release Engineering", table_cell_bold), Paragraph("Version 1.2 Production Release", table_cell), Paragraph("Production Ready", table_cell_bold), Paragraph("August 31, 2026", table_cell)],
+    ]
+    t_appr = Table(appr_data, colWidths=[140, 140, 124, 100])
+    t_appr.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), primary_color),
         ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
         ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('LEFTPADDING', (0,0), (-1,-1), 5),
-        ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
     ]))
-    story.append(api_table)
+    story.append(t_appr)
 
-    # Section 5: Non-Functional Requirements & Sign-off
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("5. Non-Functional Requirements (NFR)", h1_style))
-    story.append(Paragraph("<b>• Performance:</b> Sub-second REST latency under standard 4G/LTE; streaming multipart upload resilience with 120s timeout for remote field conditions.", bullet_style))
-    story.append(Paragraph("<b>• Security & Compliance:</b> Passlib Bcrypt salt-hashing, standard HS256 JWT bearer authentication, and Aadhaar UIDAI non-prefix validation.", bullet_style))
-    story.append(Paragraph("<b>• High Availability:</b> Railway high-concurrency Uvicorn engine backed by MongoDB Atlas cluster failover and Cloudinary redundant media storage.", bullet_style))
-
-    # Approvals Table
-    story.append(Spacer(1, 10))
-    story.append(Paragraph("6. Document Approvals & Sign-Off", h1_style))
-    appr_data = [
-        [Paragraph("Role", table_header_style), Paragraph("Name", table_header_style), Paragraph("Status", table_header_style), Paragraph("Sign-Off Date", table_header_style)],
-        [Paragraph("Lead Developer", table_cell_bold), Paragraph("Lokesh Pawalia", table_cell_style), Paragraph("Approved", table_cell_bold), Paragraph("August 31, 2026", table_cell_style)],
-        [Paragraph("Lead Developer", table_cell_bold), Paragraph("Sarthak Srivastava", table_cell_style), Paragraph("Approved", table_cell_bold), Paragraph("August 31, 2026", table_cell_style)],
-        [Paragraph("Release Version", table_cell_bold), Paragraph("POD App Version 1.2", table_cell_style), Paragraph("Production Ready", table_cell_bold), Paragraph("August 31, 2026", table_cell_style)],
-    ]
-    appr_table = Table(appr_data, colWidths=[120, 150, 114, 120])
-    appr_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), primary_color),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#CBD5E1")),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('LEFTPADDING', (0,0), (-1,-1), 8),
-        ('RIGHTPADDING', (0,0), (-1,-1), 8),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F8FAFC")]),
-    ]))
-    story.append(appr_table)
-
-    # Build PDF
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"PDF built successfully: {filename}")
+    
+    # Also copy to Downloads
+    dl_pdf = os.path.join(r"C:\Users\me\Downloads", filename)
+    try:
+        shutil.copyfile(filename, dl_pdf)
+        print(f"Copied PDF to: {dl_pdf}")
+    except Exception as e:
+        print(f"Could not copy PDF to Downloads: {e}")
 
 if __name__ == "__main__":
     out_file = sys.argv[1] if len(sys.argv) > 1 else "FRS_POD_App_v1.2.pdf"
