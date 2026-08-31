@@ -103,9 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (_aadhaarController.text.trim().isEmpty) {
+    final rawAadhaar = _aadhaarController.text.trim();
+    if (rawAadhaar.length != 12 || !RegExp(r'^[2-9][0-9]{11}$').hasMatch(rawAadhaar)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your Aadhaar number.')),
+        const SnackBar(content: Text('Please enter a valid 12-digit Aadhaar number.')),
       );
       return;
     }
@@ -248,6 +249,9 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
             maxLength: 50,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+            ],
             decoration: InputDecoration(
               labelText: 'Full Name',
               hintText: 'Enter your full name',
