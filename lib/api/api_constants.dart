@@ -1,13 +1,8 @@
 
 
 class ApiConstants {
-  /// Leave empty for emulator/desktop.
-  /// Set this only when testing on a physical phone.
-  static const String customHost = '192.168.1.49';
+  static const String baseUrl = 'https://pod-app-production-818a.up.railway.app';
 
-  static String get baseUrl {
-    return 'https://pod-app-production-818a.up.railway.app';
-  }
 
   // Auth
   static const checkPhone = '/auth/check-phone';
